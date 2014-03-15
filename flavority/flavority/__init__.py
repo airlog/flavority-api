@@ -1,31 +1,28 @@
 
-from flask import Flask
+from flask import Flask, g, json
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.restful import Api
 
 __version__ = "0.1.0"
-__envvar__ = "FLAVORITY_SETTINGS"
-
-def load_config(a):
-    """
-    Loading application configuration from environment variable or, if not set, from config file
-    distributed with this module.
-    
-    :param a:   flask's application object
-    """
-    a.config.from_object("{}.config".format(__name__))    # default settings
-    try: a.config.from_envvar(__envvar__)                 # override defaults
-    except RuntimeError: pass
-
+   
 app = Flask(__name__)
+app.db = SQLAlchemy(app)
+app.restapi = Api(app)
 
-load_config(app)
+from flavority.auth import Auth
+lm = Auth(app)
 
-# dummy function to see if everything set up correctly
+import flavority.resources
+import flavority.controllers
+        
+flavority.controllers.load_config(app, package = __name__)
+flavority.controllers.load_database(app)
+    
 @app.route("/")
-def hello_world():
-    return """
-            <div style="text-align: center;">
-                <h1>Hello world</h1>
-                <span style="font-size: 24px;">get ready for <b>flavority</b>!</span>
-            </div>
-        """
+@lm.auth_required
+def index():
+    return json.jsonify(
+            email = g.user.email,
+            type = g.user.type,
+        )
 
