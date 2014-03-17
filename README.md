@@ -1,2 +1,2 @@
-flavourity-api
+flavority-api
 ==============
