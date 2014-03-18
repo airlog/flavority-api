@@ -50,7 +50,8 @@ class User(db.Model, UserMixin):
             USER_TYPE_COMMON: "COMMON",
             USER_TYPE_ADMIN: "ADMINISTRATOR"
         }
-    
+
+    __tablename__ = "User"    
     id = db.Column(db.Integer, primary_key = True)
     email = db.Column(db.String(EMAIL_LENGTH), unique = True, nullable = False)
     salt  = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
