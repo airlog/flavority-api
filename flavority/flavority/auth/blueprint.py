@@ -16,7 +16,7 @@ class UserManager:
         self.users = {}
 
         # function called when retrieving UserID from session
-        # should accept a single argument which will precisly indentify the user
+        # should accept a single argument which will precisely identify the user
         self.user_loader_func = None
         
         # function called when authenticating user credentials
@@ -58,7 +58,7 @@ class UserManager:
         Uses *user_auth_func* with arguments forwarded from this method's call to retrieve user object
         based on some data provided by the user (eg. a login form).
         
-        Function used as *user_auth_function* should return a object with interface defined by
+        Function used as *user_auth_function* should return an object with interface defined by
         **auth.mixins.UserMixin** class.
         
         Returns a user object on successful login or *None* if no user object can be found for provided
@@ -81,7 +81,7 @@ class UserManager:
         
     def user_authenticator(self, fn):
         """
-        Use this decorator to specify a function that retrieves User object based on a data provided
+        Use this decorator to specify a function that retrieves User object based on data provided
         by a user (eg. with a login form).
         """
         self.user_auth_func = fn
