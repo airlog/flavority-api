@@ -7,5 +7,5 @@ def Auth(app, **kwargs):
     blueprint = Blueprint("LoginManager", __name__)
     app.register_blueprint(blueprint, **kwargs)
         
-    return UserManager()
+    return UserManager(app.config['SECRET_KEY'])
 
