@@ -50,7 +50,7 @@ setup(
         "Flask>=0.10",
         "Flask-RESTful>=0.2.11",
         "Flask-SQLAlchemy>=1.0",
-        "psycopg2>=2.5",
+        #"psycopg2>=2.5",
         "SQLAlchemy>=0.9",
     ],
 

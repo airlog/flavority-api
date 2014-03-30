@@ -1,8 +1,11 @@
 
 from binascii import hexlify
+from datetime import datetime, timezone, date
 from hashlib import sha256
+import json
 from re import compile as Regex
 from os import urandom
+import traceback
 
 from flavority import app
 from flavority.auth.mixins import UserMixin
@@ -23,6 +26,41 @@ favour_recipes = db.Table('favour_recipes',
                           db.Column('user', db.Integer, db.ForeignKey('User.id')),
                           db.Column('recipe', db.Integer, db.ForeignKey('Recipe.id')))
 #End of associations declaration
+
+def serialize_date(dt):
+
+    return dt.isoformat()
+
+def to_json_dict(inst, cls, extra_content={}):
+    """
+    Jsonify the sql alchemy query result.
+
+    in extra_content you can put any stuff you want to have in your json
+    e.g. sth that is not a column
+    """
+    convert = dict()
+    convert[db.Date] = lambda dt: dt.isoformat()
+    convert[db.DateTime] = lambda dt: dt.isoformat()
+    # add your coversions for things like datetime's
+    # and what-not that aren't serializable.
+    d = dict()
+    for c in cls.__table__.columns:
+        v = getattr(inst, c.name)
+        if type(c.type) in convert.keys() and v is not None:
+            try:
+                d[c.name] = convert[type(c.type)](v)
+
+            except:
+                traceback.print_exc()
+                d[c.name] = "Error:  Failed to covert using ", str(convert[type(c.type)])
+        elif v is None:
+            d[c.name] = str()
+        else:
+            d[c.name] = v
+    d.update(extra_content)
+    #return json.dumps(d)
+    return d
+
 
 class User(db.Model, UserMixin):
 
@@ -104,7 +142,7 @@ class Recipe(db.Model):
     dish_name = db.Column(db.String(DESCRIPTION_LENGTH))
     author_id = db.Column(db.Integer, db.ForeignKey('User.id'))
     author = db.relationship('User', backref=db.backref('recipes', lazy='dynamic'))
-    creation_date = db.Column(db.Date)
+    creation_date = db.Column(db.DateTime)
     preparation_time = db.Column(db.SmallInteger)
     photo = db.Column(db.BLOB)
     recipe_text = db.Column(db.Text)
@@ -127,6 +165,11 @@ class Recipe(db.Model):
     
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
+
+    @property
+    def json(self):
+        tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
+        return to_json_dict(self, self.__class__, tags)
 #End of 'Recipe' class declaration
 
 
@@ -240,5 +283,9 @@ class Tag(db.Model):
     
     def __repr__(self):
         return '<Tag name : %r and type : %r>' % (self.name, self.type)
+
+    @property
+    def json(self):
+        return to_json_dict(self, self.__class__)
 #End of 'Tag' class declaration
 #EOF
