@@ -1,19 +1,21 @@
 
-from binascii import hexlify
 from functools import wraps
-from os import urandom
 
-from flask import abort, Blueprint, request
+from flask import abort, request
+from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired, BadSignature
 
-from .mixins import AnonymousMixin
+from .mixins import AnonymousMixin, UserMixin
+
 
 class UserManager:
-    
-    TOKEN_LENGTH = 20
+
+    USER_ID = 'uid'
     TOKEN_HEADER = "X-Flavority-Token"
     
-    def __init__(self, *args, **kwargs):
-        self.users = {}
+    def __init__(self, secret_key, *args, **kwargs):
+        if not isinstance(secret_key, str):
+            raise TypeError()
+        self.secret_key = secret_key
 
         # function called when retrieving UserID from session
         # should accept a single argument which will precisely identify the user
@@ -22,37 +24,31 @@ class UserManager:
         # function called when authenticating user credentials
         # arguments depend on the user (forwarding them)
         self.user_auth_func = None
-        
-    def __in__(self, key):
-        return key in self.users
-    
-    def __getitem__(self, key):
-        try:
-            if isinstance(key, str): return self.users[key]
-        except KeyError: pass
-        
-    def generate_token(self, token_bytes = TOKEN_LENGTH):
-        return hexlify(urandom(token_bytes)).decode()
 
-    def register_user(self, user):
-        if user.id in self.users.values(): raise ValueError()
-        
-        token = self.generate_token()
-        while token in self.users: token = self.generate_token()
-        self.users[token] = user.id
-        
-        return token
-        
-    def unregister_user(self):
-        token = request.headers[self.TOKEN_HEADER]
-        del self.users[token]
-    
+    def generate_token(self, userMixin, expiration=900):
+        if not isinstance(userMixin, UserMixin):
+            raise TypeError()
+        s = TimedJSONWebSignatureSerializer(self.secret_key, expires_in=expiration)
+        return s.dumps({
+            self.USER_ID: userMixin.get_id(),
+        })
+
     def get_current_user(self):
+        s = TimedJSONWebSignatureSerializer(self.secret_key)
         try:
-            return self.user_loader_func(self.users[request.headers[self.TOKEN_HEADER]])
+            token = request.headers[self.TOKEN_HEADER]
         except KeyError:
-            pass
-    
+            return None
+
+        # decode the token to access user identification data
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            abort(401)
+        except BadSignature:
+            return None
+        return self.user_loader_func(data[self.USER_ID])
+
     def login_user(self, *args, **kwargs):
         """
         Uses *user_auth_func* with arguments forwarded from this method's call to retrieve user object
@@ -65,8 +61,8 @@ class UserManager:
         credentials.
         """
         user = self.user_auth_func(*args, **kwargs)
-        if user is None or isinstance(user, AnonymousMixin) or user == AnonymousMixin: return None
-        
+        if user is None or isinstance(user, AnonymousMixin) or user == AnonymousMixin:
+            return None
         return user
     
     ###
