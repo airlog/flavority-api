@@ -2,7 +2,7 @@ from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 from sqlalchemy.exc import SQLAlchemyError
 from flavority import lm, app
-from models import Comment
+from .models import Comment
 
 
 class Comments(Resource):
