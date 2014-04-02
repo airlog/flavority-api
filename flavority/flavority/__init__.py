@@ -26,6 +26,8 @@ def load_database(a):
     a.db.drop_all()
     a.db.create_all()
 
+import flavority.models
+
 load_config(app, package=__name__)
 load_database(app)
 
