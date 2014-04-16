@@ -44,7 +44,7 @@ class Signup(Resource):
         return {
             "result": "success",
             "email": user.email,
-        }
+        }, 204
 
 
 class Signin(Resource):
@@ -60,6 +60,9 @@ class Signin(Resource):
     ###
     ### RESTful
     ###
+    def options(self):
+        return {}, 200
+    
     def post(self):
         args = Signin.get_form_parser().parse_args()        
         user = lm.login_user(args["email"], args["password"])
@@ -69,4 +72,6 @@ class Signin(Resource):
         return {
             "result": "success",
             "token": lm.generate_token(user).decode(),
+            'duration': lm.TOKEN_DURATION,
         }
+
