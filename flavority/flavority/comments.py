@@ -58,6 +58,7 @@ class Comments(Resource):
             return {"result": "failure"}
         return {"result": "success"}
 
+    #Method handles comment edition
     def edit(self, comment_id, new_title, new_text):
         comment = self.get_comment(comment_id)      #same note as in $delete$ method -> will search for proper comment (only author can edit)
         comment.title = new_title
