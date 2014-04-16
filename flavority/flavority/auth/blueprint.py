@@ -11,6 +11,7 @@ class UserManager:
 
     USER_ID = 'uid'
     TOKEN_HEADER = "X-Flavority-Token"
+    TOKEN_DURATION = 900
     
     def __init__(self, secret_key, *args, **kwargs):
         if not isinstance(secret_key, str):
@@ -25,9 +26,11 @@ class UserManager:
         # arguments depend on the user (forwarding them)
         self.user_auth_func = None
 
-    def generate_token(self, userMixin, expiration=900):
+    def generate_token(self, userMixin, expiration=None):
         if not isinstance(userMixin, UserMixin):
             raise TypeError()
+        if expiration is None:
+            expiration = self.TOKEN_DURATION
         s = TimedJSONWebSignatureSerializer(self.secret_key, expires_in=expiration)
         return s.dumps({
             self.USER_ID: userMixin.get_id(),
