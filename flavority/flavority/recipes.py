@@ -2,7 +2,7 @@ from flask.ext.restful import Resource, reqparse
 import traceback
 from flask_restful import abort
 from flavority import lm, app
-from .models import Recipe
+from .models import Recipe, Tag
 
 
 class Recipes(Resource):
@@ -18,6 +18,10 @@ class Recipes(Resource):
         args = Recipes.get_form_parser().parse_args()
 
         recipe = Recipe(args.dish_name, None, args.preparation_time, args.recipe_text, args.portions, lm.get_current_user())
+
+        if args.tags is not None:
+            recipe.tags = Tag.query.filter(Tag.id.in_(','.join([str(i) for i in args.tags]))).all()
+
         # TODO: add rest of the arguments
 
         app.logger.debug(recipe)
@@ -38,6 +42,7 @@ class Recipes(Resource):
         parser.add_argument('recipe_text', type=str, required=True, help="recipe text")
         parser.add_argument('preparation_time', type=int, required=True, help="preparation time")
         parser.add_argument('portions', type=int, required=True, help="portions")
+        parser.add_argument('tags', type=list, required=False, help="tags", action="append")
 
         return parser
 
@@ -69,6 +74,10 @@ class RecipesWithId(Resource):
         RecipesWithId.update_if_set(recipe, args, 'recipe_text')
         RecipesWithId.update_if_set(recipe, args, 'preparation_time')
         RecipesWithId.update_if_set(recipe, args, 'portions')
+        if args.tags is not None:
+            recipe.tags = Tag.query.filter(Tag.id.in_(','.join([str(i) for i in args.tags]))).all()
+
+
         # TODO: add rest of the arguments
 
         try:
@@ -99,6 +108,7 @@ class RecipesWithId(Resource):
         parser.add_argument('recipe_text', type=str, help="recipe text")
         parser.add_argument('preparation_time', type=int, help="preparation time")
         parser.add_argument('portions', type=int, help="portions")
+        parser.add_argument('tags', type=int, help="tags", action="append")
 
         return parser
 
