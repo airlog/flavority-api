@@ -2,7 +2,7 @@ from flask.ext.restful import Resource, reqparse
 import traceback
 from flask_restful import abort
 from flavority import lm, app
-from .models import Recipe, Tag
+from .models import Recipe, Tag, tag_assignment, ingredient_assignment
 
 
 class Recipes(Resource):
@@ -112,3 +112,22 @@ class RecipesWithId(Resource):
 
         return parser
 
+    @staticmethod
+    def get_recipe_with_tags(tag_list):
+        if len(tag_list) > 0:
+            try:
+                return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
+            except:
+                abort(404, message="No recipes with given tags!")
+        else:
+            return -1       #Error!
+
+    @staticmethod
+    def get_recipe_with_ingredients(ingredient_list):
+        if len(ingredient_list) > 0:
+            try:
+                return Recipe.query.join(ingredient_assignment).filter(ingredient_assignment.ingr.in_(ingredient_list)).all()
+            except:
+                abort(404, message="No recipes with given ingredients!")
+        else:
+            return -1       #ERROR!!
