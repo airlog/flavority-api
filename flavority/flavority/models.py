@@ -15,10 +15,17 @@ db = app.db
 #Associations aka Logic tables (many-to-many connections)
 #DEL -> te takie inne niebieskie tabelki w uml'u, dla mnie to one sa niebieskie ale pewnie jakos inaczej ten kolor sie zwie, whatever
 #Table will connect Ingredients with Recipes
-ingredient_assignment = db.Table('ingredient_assignment',
-                                 db.Column('recipe', db.Integer, db.ForeignKey('Recipe.id')),
-                                 db.Column('ingr', db.Integer, db.ForeignKey('Ingredient.id')),
-                                 db.Column('amount', db.Integer))
+class IngredientAssociation(db.Model):
+
+    __tablename__ = 'IngredientAssociation'
+
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), primary_key=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('Ingredient.id'), primary_key=True)
+    amount = db.Column(db.Integer)
+
+    ingredient = db.relationship('Ingredient')
+
+
 tag_assignment = db.Table('tag_assignment',
                           db.Column('recipe', db.Integer, db.ForeignKey('Recipe.id')),
                           db.Column('tag', db.Integer, db.ForeignKey('Tag.id')))
@@ -151,7 +158,7 @@ class Recipe(db.Model):
     rank = db.Column(db.Float)
     eventToAdminControl = db.Column(db.Boolean)
     portions = db.Column(db.SmallInteger)
-    ingredients = db.relationship('Ingredient', secondary=ingredient_assignment)
+    ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=tag_assignment)
     
     def __init__(self, dish_name, creation_date, preparation_time, recipe_text, portions, author):
@@ -168,8 +175,13 @@ class Recipe(db.Model):
 
     @property
     def json(self):
+        extra_content = {}
         tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
-        return to_json_dict(self, self.__class__, tags)
+        extra_content.update(tags)
+        ingredients = {} if self.ingredients is None else \
+            {'ingredients': [{"ingr_id": i.ingredient_id, "amount": i.amount} for i in self.ingredients]}
+        extra_content.update(ingredients)
+        return to_json_dict(self, self.__class__, extra_content)
 #End of 'Recipe' class declaration
 
 
