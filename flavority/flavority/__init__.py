@@ -22,9 +22,23 @@ def load_config(a, package = None):
     try: a.config.from_envvar(__envvar__)                 # override defaults
     except RuntimeError: pass
 
+
 def load_database(a):
+    def create_test_data_tags():
+        from random import randint, sample
+        from flavority.models import Recipe, Tag
+
+        recipes = [Recipe('Przepis{}'.format(i), randint(1, 60), 'Tekst{}'.format(i), randint(1, 4), None) for i in range(30)]
+        tags = [Tag('Tag{}'.format(i), None) for i in range(100)]
+
+        for recipe in recipes:
+            recipe.tags = sample(tags, randint(1, 10))
+            a.db.session.add(recipe)
+        a.db.session.commit()
+
     a.db.drop_all()
     a.db.create_all()
+#    create_test_data_tags()
 
 import flavority.models
 
