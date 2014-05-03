@@ -164,14 +164,14 @@ class Recipe(db.Model):
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=tag_assignment)
     
-    def __init__(self, dish_name, creation_date, preparation_time, recipe_text, portions, author):
+    def __init__(self, dish_name, preparation_time, recipe_text, portions, author_id, creation_date=None):
         self.dish_name = dish_name
         if creation_date is None:
             self.creation_date = datetime.now()
         self.preparation_time = preparation_time
         self.recipe_text = recipe_text
         self.portions = portions
-        self.author = author
+        self.author_id = author_id
     
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
