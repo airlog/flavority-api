@@ -96,12 +96,15 @@ class User(db.Model, UserMixin):
             USER_TYPE_ADMIN: "ADMINISTRATOR"
         }
 
+    TOKEN_LENGTH = 1024
+
     __tablename__ = "User"    
     id = db.Column(db.Integer, primary_key = True)
     email = db.Column(db.String(EMAIL_LENGTH), unique = True, nullable = False)
     salt  = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     password = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     type = db.Column(db.Enum(*tuple(USER_TYPES.values()), name = USER_TYPE_ENUM_NAME), default = USER_TYPES[USER_TYPE_COMMON])
+#    token = db.Column(db.String(TOKEN_LENGTH), default=None)
     favourites = db.relationship('Recipe', secondary=favour_recipes)
 
     @staticmethod
@@ -172,6 +175,16 @@ class Recipe(db.Model):
     
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
+
+    def to_json_short(self):
+        return {
+            "id": self.id,
+            "dishname": self.dish_name,
+            "creation_date": self.creation_date,
+            "photo": None,
+            "rank": self.rank,
+            "tags": [i.json for i in self.tags],
+        }
 
     @property
     def json(self):

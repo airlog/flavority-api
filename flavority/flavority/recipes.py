@@ -1,3 +1,6 @@
+
+from flask import request
+
 from flask.ext.restful import Resource, reqparse
 import traceback
 from flask_restful import abort
@@ -7,13 +10,21 @@ from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociati
 
 class Recipes(Resource):
 
-    decorators = [lm.auth_required]
-
     def get(self):
+        short = request.args.get('short', None)
+        # handling ?short
+        if short is not None:
+            return {
+                'result': 'success',
+                'recipes-short': list(map(lambda x: x.to_json_short(), Recipe.query.all())),
+            }
+
+        app.logger.debug('short = {}'.format(short))
         recipes = Recipe.query.all()
         app.logger.debug(recipes[0].ingredients)
         return [recipe.json for recipe in recipes]
 
+    @lm.auth_required
     def post(self):
         args = Recipes.get_form_parser().parse_args()
 
