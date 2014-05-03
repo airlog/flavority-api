@@ -5,7 +5,9 @@ from flask.ext.restful import Resource, reqparse
 import traceback
 from flask_restful import abort
 from flavority import lm, app
+
 from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation
+from .util import Flavority
 
 
 class Recipes(Resource):
@@ -14,15 +16,14 @@ class Recipes(Resource):
         short = request.args.get('short', None)
         # handling ?short
         if short is not None:
-            return {
-                'result': 'success',
-                'recipes-short': list(map(lambda x: x.to_json_short(), Recipe.query.all())),
-            }
+            return Flavority.success(**{
+                     'recipes-short': list(map(lambda x: x.to_json_short(), Recipe.query.all())),
+                })
 
         app.logger.debug('short = {}'.format(short))
         recipes = Recipe.query.all()
         app.logger.debug(recipes[0].ingredients)
-        return [recipe.json for recipe in recipes]
+        return Flavority.success(recipes=[recipe.json for recipe in recipes])
 
     @lm.auth_required
     def post(self):
@@ -41,9 +42,9 @@ class Recipes(Resource):
         except:
             traceback.print_exc()
             app.db.session.rollback()
-            return {"result": "failure"}, 500
+            return Flavority.failure(), 500
 
-        return {"result": "success"}, 201
+        return Flavority.success(), 201
 
     @staticmethod
     def get_form_parser():
@@ -94,9 +95,9 @@ class RecipesWithId(Resource):
             app.db.session.commit()
         except:
             app.db.session.rollback()
-            return {"result": "failure"}
+            return Flavority.failure()
 
-        return {"result": "success"}
+        return Flavority.success()
 
     def put(self, recipe_id):
 
@@ -118,9 +119,9 @@ class RecipesWithId(Resource):
         except:
             traceback.print_exc()
             app.db.session.rollback()
-            return {"result": "failure"}, 500
+            return Flavority.failure(), 500
 
-        return {"result": "success"}
+        return Flavority.success()
 
     @staticmethod
     def get_recipe_by_id(recipe_id):

@@ -4,6 +4,7 @@ from sqlalchemy import desc, func
 
 from . import app
 from .models import Tag, tag_assignment
+from .util import Flavority
 
 
 # TODO: moze by tak klient mowil ile chce tagow?
@@ -15,14 +16,16 @@ class TagsResource(Resource):
     def get(self):
         '''
         Returns a list of TAGS_LIMIT most used tags in the following convention:
-            [
+            ...
+            tags: [
                 {
                     'id': {{ tagId }},
                     'name': {{ tagName }},
                     'count': {{ recipesTaggedCount }},
                 },
-                # (...)
+                ...
             ]
+            ...
         '''
 
         # this query counts how many recipes are tagged by every tag (by id)
@@ -37,4 +40,4 @@ class TagsResource(Resource):
             .limit(self.TAGS_LIMIT)\
             .all()
 
-        return [{'id': tag[0], 'name': tag[1], 'count': tag[2]} for tag in tags]
+        return Flavority.success(tags=[{'id': tag[0], 'name': tag[1], 'count': tag[2]} for tag in tags])
