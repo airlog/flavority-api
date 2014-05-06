@@ -18,12 +18,33 @@ db = app.db
 class IngredientAssociation(db.Model):
 
     __tablename__ = 'IngredientAssociation'
-
-    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), primary_key=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('Ingredient.id'), primary_key=True)
+    
+    id = db.Column(db.Integer, primary_key = True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'))
+    ingredient_unit_id = db.Column(db.Integer, db.ForeignKey('IngredientUnit.id'))
     amount = db.Column(db.Integer)
 
+    ingredient_unit = db.relationship('IngredientUnit')
+
+    def __init__(self, ingredient_unit, amount):
+        self.ingredient_unit = ingredient_unit
+        self.amount = amount    
+
+
+class IngredientUnit(db.Model):
+
+    __tablename__ = 'IngredientUnit'
+
+    id = db.Column(db.Integer, primary_key = True)
+    unit_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('Ingredient.id'))
+
     ingredient = db.relationship('Ingredient')
+    unit = db.relationship('Unit')
+
+    def __init__(self, ingredient, unit):
+        self.ingredient = ingredient
+        self.unit = unit    
 
 
 tag_assignment = db.Table('tag_assignment',
@@ -242,15 +263,16 @@ class Ingredient(db.Model):
     
     __tablename__ = 'Ingredient'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(INGREDIENT_NAME_LENGTH), unique=True)
-    unit_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))
-    unit = db.relationship('Unit', backref=db.backref('units', lazy='dynamic'))
-    
+    name = db.Column(db.String(INGREDIENT_NAME_LENGTH))
+#    unit_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))
+#    unit = db.relationship('Unit', backref=db.backref('units', lazy='dynamic'))
+        
     def __init__(self, name):
         self.name = name
     
     def __repr__(self):
         return '<Ingredient\'s name : %r>' % self.name
+    
 #End of 'Ingredient' class declaration
 
 

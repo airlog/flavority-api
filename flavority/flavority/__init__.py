@@ -23,7 +23,7 @@ def load_config(a, package = None):
     except RuntimeError: pass
 
 def load_database(a):
-    a.db.drop_all()
+#    a.db.drop_all()
     a.db.create_all()
 
 import flavority.models
