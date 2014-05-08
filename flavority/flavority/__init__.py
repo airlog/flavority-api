@@ -36,7 +36,7 @@ def load_database(a):
             a.db.session.add(recipe)
         a.db.session.commit()
 
-    a.db.drop_all()
+#    a.db.drop_all()
     a.db.create_all()
 #    create_test_data_tags()
 
