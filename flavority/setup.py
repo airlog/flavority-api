@@ -50,8 +50,8 @@ setup(
         "Flask>=0.10",
         "Flask-RESTful>=0.2.11",
         "Flask-SQLAlchemy>=1.0",
-        #"psycopg2>=2.5",
         "SQLAlchemy>=0.9",
+        'wand>=0.3.7',
     ],
 
     packages = find_packages(exclude = ["tests*"]),

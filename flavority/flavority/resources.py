@@ -4,6 +4,7 @@ from .recipes import RecipesWithId, Recipes
 from .signing import Signup, Signin
 from .comments import Comments
 from .tags import TagsResource
+from .photos import PhotoResource
 
 
 app.restapi.add_resource(Signup, "/auth/signup")
@@ -15,3 +16,7 @@ app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>")
 app.restapi.add_resource(Comments, "/comments")
 
 app.restapi.add_resource(TagsResource, '/tags/')
+
+app.restapi.add_resource(PhotoResource,
+                         '/photos/',
+                         '/photos/<int:photo_id>/')

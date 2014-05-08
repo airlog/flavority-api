@@ -172,19 +172,19 @@ class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     dish_name = db.Column(db.String(DESCRIPTION_LENGTH))
     author_id = db.Column(db.Integer, db.ForeignKey('User.id'))
-    author = db.relationship('User', backref=db.backref('recipes', lazy='dynamic'))
     creation_date = db.Column(db.DateTime)
     preparation_time = db.Column(db.SmallInteger)
-    photo = db.Column(db.BLOB)
     recipe_text = db.Column(db.Text)
     tasteMark = db.Column(db.Float)
     difficultyMark = db.Column(db.Float)
     rank = db.Column(db.Float)
     eventToAdminControl = db.Column(db.Boolean)
     portions = db.Column(db.SmallInteger)
+
+    author = db.relationship('User', backref=db.backref('recipes', lazy='dynamic'))
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=tag_assignment)
-    
+
     def __init__(self, dish_name, preparation_time, recipe_text, portions, author_id, creation_date=None):
         self.dish_name = dish_name
         if creation_date is None:
@@ -336,3 +336,29 @@ class Tag(db.Model):
         return to_json_dict(self, self.__class__)
 #End of 'Tag' class declaration
 #EOF
+
+
+class Photo(db.Model):
+    '''
+    This class is a model for table containg photos used by recipes.
+
+    Each recipe can have many photos, but any photo can only have one recipe. Photos should be stored as Base64 encoded
+    strings with a proper format column set.
+    '''
+
+    DATA_ENCODED_LENGTH = 1 * 1024 * 1024   # 1 MB
+
+    FORMAT = 'jpeg'
+
+    __tablename__ = 'Photo'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), nullable=False)
+    full_data = db.Column(db.LargeBinary, nullable=False)
+    mini_data = db.Column(db.LargeBinary, nullable=True)
+
+    recipe = db.relationship('Recipe', backref=db.backref('photos', lazy='dynamic'))
+
+    @staticmethod
+    def supported_formats():
+        return Photo.FORMAT_ENUM
