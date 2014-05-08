@@ -201,19 +201,18 @@ class Recipe(db.Model):
         return {
             "id": self.id,
             "dishname": self.dish_name,
-            "creation_date": self.creation_date,
-            "photo": None,
-            "rank": self.rank,
+            "creation_date": str(self.creation_date),
+            "photos": list(map(lambda x: x.id, self.photos)),
+            "rank": self.rank if self.rank is not None else 0.0,
             "tags": [i.json for i in self.tags],
         }
 
-    @property
-    def json(self):
+    def to_json(self):
         extra_content = {}
         tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
         extra_content.update(tags)
         ingredients = {} if self.ingredients is None else \
-            {'ingredients': [{"ingr_id": i.ingredient_id, "amount": i.amount} for i in self.ingredients]}
+            {'ingredients': [{"ingr_id": i.ingredient_unit_id, "amount": i.amount} for i in self.ingredients]}
         extra_content.update(ingredients)
         return to_json_dict(self, self.__class__, extra_content)
 #End of 'Recipe' class declaration

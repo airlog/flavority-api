@@ -12,18 +12,48 @@ from .util import Flavority
 
 class Recipes(Resource):
 
-    def get(self):
-        short = request.args.get('short', None)
-        # handling ?short
-        if short is not None:
-            return Flavority.success(**{
-                     'recipes-short': list(map(lambda x: x.to_json_short(), Recipe.query.all())),
-                })
+    @staticmethod
+    def parse_get_arguments():
+        def cast_bool(x):
+            if x.lower() == '': return True
+            elif x.lower() == 'false': return False
+            elif x.lower() == 'true': return True
+            try:
+                return bool(x)
+            except ValueError:
+                return False
 
-        app.logger.debug('short = {}'.format(short))
-        recipes = Recipe.query.all()
-        app.logger.debug(recipes[0].ingredients)
-        return Flavority.success(recipes=[recipe.json for recipe in recipes])
+        def cast_sort(x):
+            sortables, x = ['id', 'date_added', 'rate'], x.lower()
+            if x in sortables:
+                return x
+            return sortables[0]
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('short', type=cast_bool)
+        parser.add_argument('sort_by', type=cast_sort, default='id')
+        return parser.parse_args()
+
+    def get(self):
+        args = self.parse_get_arguments()
+
+        # select proper sorting key
+        query = {
+            'id': lambda x: x,
+            'date_added': lambda x: x.order_by(Recipe.creation_date),
+            'rate': lambda x: x.order_by(Recipe.rank)
+        }[args['sort_by']](Recipe.query)
+
+        # TODO: get parameters for limiting and paging
+        # since this may be quite often used feature it may be implemented
+        # as some kind of a Pager
+        query = query.offset(0).limit(10)
+
+        # return short or standard form as requested
+        func = lambda x: x.to_json()
+        if args['short']: func = lambda x: x.to_json_short()
+
+        return list(map(func, query.all()))
 
     @lm.auth_required
     def post(self):
@@ -62,8 +92,10 @@ class Recipes(Resource):
     def add_ingredients(recipe, ingredients):
         if ingredients is not None:
             ingredient_id_to_amount = {association["ingr_id"]: association["amount"] for association in ingredients}
-            available_ingredients = \
-                Ingredient.query.filter(Ingredient.id.in_(','.join([str(assoc["ingr_id"]) for assoc in ingredients]))).all()
+            available_ingredients = Ingredient\
+                .query\
+                .filter(Ingredient.id.in_(','.join([str(assoc["ingr_id"]) for assoc in ingredients])))\
+                .all()
 
             if len(ingredient_id_to_amount) != len(available_ingredients):
                 abort(500, message="Not all ingredients are present in the database")
