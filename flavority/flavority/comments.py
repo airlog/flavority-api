@@ -1,8 +1,11 @@
+
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 from sqlalchemy.exc import SQLAlchemyError
 from flavority import lm, app
+
 from .models import Comment
+from .util import Flavority
 
 
 class Comments(Resource):
@@ -55,8 +58,8 @@ class Comments(Resource):
             app.db.session.commit()
         except SQLAlchemyError:
             app.db.session.rollback()
-            return {"result": "failure"}
-        return {"result": "success"}
+            return Flavority.failure()
+        return Flavority.success()
 
     #Method handles comment edition
     def edit(self, comment_id, new_title, new_text):
@@ -67,5 +70,5 @@ class Comments(Resource):
             app.db.session.commit()
         except SQLAlchemyError:
             app.db.session.rollback()
-            return {"result": "failure"}
-        return {"result": "success"}
+            return Flavority.failure()
+        return Flavority.success()

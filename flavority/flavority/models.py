@@ -117,12 +117,15 @@ class User(db.Model, UserMixin):
             USER_TYPE_ADMIN: "ADMINISTRATOR"
         }
 
+    TOKEN_LENGTH = 1024
+
     __tablename__ = "User"    
     id = db.Column(db.Integer, primary_key = True)
     email = db.Column(db.String(EMAIL_LENGTH), unique = True, nullable = False)
     salt  = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     password = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     type = db.Column(db.Enum(*tuple(USER_TYPES.values()), name = USER_TYPE_ENUM_NAME), default = USER_TYPES[USER_TYPE_COMMON])
+#    token = db.Column(db.String(TOKEN_LENGTH), default=None)
     favourites = db.relationship('Recipe', secondary=favour_recipes)
 
     @staticmethod
@@ -182,17 +185,27 @@ class Recipe(db.Model):
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=tag_assignment)
     
-    def __init__(self, dish_name, creation_date, preparation_time, recipe_text, portions, author):
+    def __init__(self, dish_name, preparation_time, recipe_text, portions, author_id, creation_date=None):
         self.dish_name = dish_name
         if creation_date is None:
             self.creation_date = datetime.now()
         self.preparation_time = preparation_time
         self.recipe_text = recipe_text
         self.portions = portions
-        self.author = author
+        self.author_id = author_id
     
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
+
+    def to_json_short(self):
+        return {
+            "id": self.id,
+            "dishname": self.dish_name,
+            "creation_date": self.creation_date,
+            "photo": None,
+            "rank": self.rank,
+            "tags": [i.json for i in self.tags],
+        }
 
     @property
     def json(self):
