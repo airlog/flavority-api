@@ -26,17 +26,12 @@ class Recipes(Resource):
 
         def cast_sort(x):
             sortables, x = ['id', 'date_added', 'rate'], x.lower()
-            if x in sortables:
-                return x
-            return sortables[0]
+            return x if x in sortables else sortables[0]
 
         def cast_natural(x):
-            try:
-                i = int(x)
-            except ValueError:
-                return 1
-            if i >= 1: return i
-            else: return 1
+            try: i = int(x)
+            except ValueError: return 1
+            return i if i >= 1 else 1
 
         parser = reqparse.RequestParser()
         parser.add_argument('short', type=cast_bool)
