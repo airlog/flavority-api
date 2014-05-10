@@ -197,12 +197,13 @@ class Recipe(db.Model):
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
 
-    def to_json_short(self):
+    def to_json_short(self, get_photo=None):
+        if get_photo is None: get_photo = lambda x: x.id
         return {
             "id": self.id,
             "dishname": self.dish_name,
             "creation_date": str(self.creation_date),
-            "photos": list(map(lambda x: x.id, self.photos)),
+            "photos": list(map(lambda x: get_photo(x), self.photos)),
             "rank": self.rank if self.rank is not None else 0.0,
             "tags": [i.json for i in self.tags],
         }

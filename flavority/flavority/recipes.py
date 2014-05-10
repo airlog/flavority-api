@@ -45,20 +45,23 @@ class Recipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         return parser.parse_args()
 
+    def options(self):
+        return None
+
     def get(self):
         args = self.parse_get_arguments()
 
         # select proper sorting key
         query = {
             'id': lambda x: x,
-            'date_added': lambda x: x.order_by(Recipe.creation_date),
+            'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
             'rate': lambda x: x.order_by(Recipe.rank)
         }[args['sort_by']](Recipe.query)
         query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
 
         # return short or standard form as requested
         func = lambda x: x.to_json()
-        if args['short']: func = lambda x: x.to_json_short()
+        if args['short']: func = lambda x: x.to_json_short(get_photo=lambda photo: photo.mini_data.decode())
 
         return list(map(func, query.all()))
 

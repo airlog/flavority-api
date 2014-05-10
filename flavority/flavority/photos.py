@@ -61,6 +61,9 @@ class PhotoResource(Resource):
         parser.add_argument('recipe_id', required=True, type=int)
         return parser.parse_args()
 
+    def options(self):
+        return None
+
     def get(self, photo_id=None):
         """
         Returns a Base64 encoded JPEG image with supplied id from database.
