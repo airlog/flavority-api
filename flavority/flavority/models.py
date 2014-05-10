@@ -322,9 +322,9 @@ class Tag(db.Model):
     __tablename__ = 'Tag'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(TAG_NAME_LENGTH), unique=True)
-    type = db.Column(db.String(TAG_TYPE_LENGTH))
+    type = db.Column(db.String(TAG_TYPE_LENGTH))    # FIXME: what's this?
     
-    def __init__(self, name, type):
+    def __init__(self, name, type=None):
         self.name = name
         self.type = type
     
