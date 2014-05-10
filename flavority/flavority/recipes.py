@@ -1,16 +1,17 @@
 
-from flask import request
+import traceback
 
 from flask.ext.restful import Resource, reqparse
-import traceback
 from flask_restful import abort
-from flavority import lm, app
 
+from . import lm, app
 from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation
-from .util import Flavority
+from .util import Flavority, ViewPager
 
 
 class Recipes(Resource):
+
+    GET_ITEMS_PER_PAGE = 10
 
     @staticmethod
     def parse_get_arguments():
@@ -29,9 +30,19 @@ class Recipes(Resource):
                 return x
             return sortables[0]
 
+        def cast_natural(x):
+            try:
+                i = int(x)
+            except ValueError:
+                return 1
+            if i >= 1: return i
+            else: return 1
+
         parser = reqparse.RequestParser()
         parser.add_argument('short', type=cast_bool)
         parser.add_argument('sort_by', type=cast_sort, default='id')
+        parser.add_argument('page', type=cast_natural, default=1)
+        parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         return parser.parse_args()
 
     def get(self):
@@ -43,11 +54,7 @@ class Recipes(Resource):
             'date_added': lambda x: x.order_by(Recipe.creation_date),
             'rate': lambda x: x.order_by(Recipe.rank)
         }[args['sort_by']](Recipe.query)
-
-        # TODO: get parameters for limiting and paging
-        # since this may be quite often used feature it may be implemented
-        # as some kind of a Pager
-        query = query.offset(0).limit(10)
+        query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
 
         # return short or standard form as requested
         func = lambda x: x.to_json()
