@@ -2,15 +2,13 @@
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 from sqlalchemy.exc import SQLAlchemyError
-from flavority import lm, app
 
-from .models import Comment
+from . import lm, app
+from .models import Comment, Recipe
 from .util import Flavority
 
 
 class Comments(Resource):
-
-    decorators = [lm.auth_required]
 
     @staticmethod
     def get_form_parser():
@@ -22,6 +20,12 @@ class Comments(Resource):
         parser.add_argument('text', type=str, required=True, help="comment text")
 
         return parser
+
+    @staticmethod
+    def parse_get_arguments():
+        parser = reqparse.RequestParser()
+        parser.add_argument('recipe_id', type=int, required=True)
+        return parser.parse_args()
 
     #Implemented to get all User's comments
     @staticmethod
@@ -50,6 +54,7 @@ class Comments(Resource):
     #TODO: Implementation of comment_post() method
 
     #Method handles comment deletion
+    @lm.auth_required
     def delete(self, comment_id, author_id, recipe_id):
         comment_to_delete = self.get_comment(comment_id, author_id, recipe_id) #If someone's user_id is different from author's id then \
                 # comment shouldn't be found because comment_id was given
@@ -62,6 +67,7 @@ class Comments(Resource):
         return Flavority.success()
 
     #Method handles comment edition
+    @lm.auth_required
     def edit(self, comment_id, new_title, new_text):
         comment = self.get_comment(comment_id)      #same note as in $delete$ method -> will search for proper comment (only author can edit)
         comment.title = new_title
@@ -72,3 +78,15 @@ class Comments(Resource):
             app.db.session.rollback()
             return Flavority.failure()
         return Flavority.success()
+
+    def options(self):
+        return None
+        
+    def get(self):
+        args = self.parse_get_arguments()
+        
+        result = []
+        for c in Recipe.query.get(args['recipe_id']).comments.all():
+            result.append(c.to_json())
+        return result
+

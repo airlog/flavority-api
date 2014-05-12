@@ -17,7 +17,7 @@ app.restapi.add_resource(Signin, "/auth/signin")
 app.restapi.add_resource(Recipes, "/recipes/")
 app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>")
 
-app.restapi.add_resource(Comments, "/comments")
+app.restapi.add_resource(Comments, "/comments/")
 
 app.restapi.add_resource(TagsResource, '/tags/')
 
