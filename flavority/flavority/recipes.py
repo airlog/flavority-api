@@ -58,7 +58,11 @@ class Recipes(Resource):
         func = lambda x: x.to_json()
         if args['short']: func = lambda x: x.to_json_short(get_photo=lambda photo: photo.mini_data.decode())
 
-        return list(map(func, query.all()))
+        return {
+            'recipes': list(map(func, query.all())),
+            'page': args['page'],
+            'totalElements': Recipe.query.count(),
+        }
 
     @lm.auth_required
     def post(self):
