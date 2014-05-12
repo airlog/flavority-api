@@ -213,8 +213,9 @@ class Recipe(db.Model):
         tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
         extra_content.update(tags)
         ingredients = {} if self.ingredients is None else \
-            {'ingredients': [{"ingr_id": i.ingredient_unit_id, "amount": i.amount} for i in self.ingredients]}
+            {'ingredients': [{"unit_name":i.ingredient_unit.unit.unit_name,"ingr_name": i.ingredient_unit.ingredient.name, "amount": i.amount} for i in self.ingredients]}
         extra_content.update(ingredients)
+        extra_content.update({'author_name': self.author.email})                
         return to_json_dict(self, self.__class__, extra_content)
 #End of 'Recipe' class declaration
 

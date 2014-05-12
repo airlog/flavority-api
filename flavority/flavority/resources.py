@@ -9,13 +9,13 @@ from .tags import TagsResource
 from .photos import PhotoResource
 
 
-app.restapi.decorators = [cors.crossdomain(origin='*', headers=['X-Requested-With'])]
+app.restapi.decorators = [cors.crossdomain(origin='*', headers=['X-Requested-With',])]
 
 app.restapi.add_resource(Signup, "/auth/signup")
 app.restapi.add_resource(Signin, "/auth/signin")
 
 app.restapi.add_resource(Recipes, "/recipes/")
-app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>/")
+app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>")
 
 app.restapi.add_resource(Comments, "/comments")
 

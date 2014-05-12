@@ -121,8 +121,10 @@ class Recipes(Resource):
 
 class RecipesWithId(Resource):
 
-    decorators = [lm.auth_required]
+    def get(self, recipe_id):
+        return RecipesWithId.get_recipe_by_id(recipe_id).to_json()
 
+    @lm.auth_required
     def delete(self, recipe_id):
 
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
@@ -136,6 +138,7 @@ class RecipesWithId(Resource):
 
         return Flavority.success()
 
+    @lm.auth_required
     def put(self, recipe_id):
 
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
@@ -159,6 +162,10 @@ class RecipesWithId(Resource):
             return Flavority.failure(), 500
 
         return Flavority.success()
+
+
+    def options(self):
+        return None
 
     @staticmethod
     def get_recipe_by_id(recipe_id):
@@ -194,6 +201,7 @@ class RecipesWithId(Resource):
                 abort(404, message="No recipes with given tags!")
         else:
             return -1       #Error!
+
 
     # @staticmethod
     # def get_recipe_with_ingredients(ingredient_list):
