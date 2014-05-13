@@ -9,7 +9,7 @@ from .tags import TagsResource
 from .photos import PhotoResource
 
 
-app.restapi.decorators = [cors.crossdomain(origin='*', headers=['X-Requested-With',])]
+app.restapi.decorators = [cors.crossdomain(origin='*', headers=['X-Requested-With'])]
 
 app.restapi.add_resource(Signup, "/auth/signup")
 app.restapi.add_resource(Signin, "/auth/signin")

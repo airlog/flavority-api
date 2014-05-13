@@ -24,7 +24,7 @@ class Comments(Resource):
     @staticmethod
     def parse_get_arguments():
         parser = reqparse.RequestParser()
-        parser.add_argument('recipe_id', type=int, required=True)
+        parser.add_argument('recipe_id', type=int, default=None)
         return parser.parse_args()
 
     #Implemented to get all User's comments
@@ -84,9 +84,10 @@ class Comments(Resource):
         
     def get(self):
         args = self.parse_get_arguments()
+
+        query = Comment.query
+        if args['recipe_id'] is not None:
+            query = Recipe.query.get(args['recipe_id']).comments
         
-        result = []
-        for c in Recipe.query.get(args['recipe_id']).comments.all():
-            result.append(c.to_json())
-        return result
+        return [ c.to_json() for c in query.all() ]
 

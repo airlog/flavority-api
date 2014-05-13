@@ -1,6 +1,7 @@
 
 from argparse import ArgumentParser
 from json import loads
+from sys import exit
 import random
 
 import flavority
@@ -8,14 +9,14 @@ from flavority.models import Recipe, Comment, User
 
 
 __author__	= "Joanna Cisło"
-__desc__	= """Create database from recipes in json format."""
+__desc__	= """Create comments."""
 
 
 def add_comments_to_database(db, n):
     
     users = User.query.all()
     recipes = Recipe.query.all()
-    comments = ['Very very very very very very very very very very very very very very very very very very very very very very very tasty', 'Not tasty', 'Good']
+    comments = ['Very ' + 'very ' * 22 + 'tasty', 'Not tasty', 'Good']
     rates = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
     
     for i in range(n):
@@ -42,3 +43,4 @@ if __name__ == "__main__":
     if args.amount:
         flavority.app.db.create_all()
         add_comments_to_database(flavority.app.db, args.amount)
+    exit(0)
