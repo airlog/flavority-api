@@ -213,8 +213,9 @@ class Recipe(db.Model):
         tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
         extra_content.update(tags)
         ingredients = {} if self.ingredients is None else \
-            {'ingredients': [{"ingr_id": i.ingredient_unit_id, "amount": i.amount} for i in self.ingredients]}
+            {'ingredients': [{"unit_name":i.ingredient_unit.unit.unit_name,"ingr_name": i.ingredient_unit.ingredient.name, "amount": i.amount} for i in self.ingredients]}
         extra_content.update(ingredients)
+        extra_content.update({'author_name': self.author.email})                
         return to_json_dict(self, self.__class__, extra_content)
 #End of 'Recipe' class declaration
 
@@ -227,21 +228,33 @@ class Comment(db.Model):
     
     __tablename__ = 'Comment'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.String(COMMENT_TITLE_LENGTH))
     text = db.Column(db.Text)
+    taste = db.Column(db.Float)
+    difficulty = db.Column(db.Float)
+    date = db.Column(db.DateTime)    
     author_id = db.Column(db.Integer, db.ForeignKey('User.id'))
     author = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))        #DELmany to one z comment do usera
-    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'))
-    recipe = db.relationship('Recipe', backref=db.backref('recipes', lazy='dynamic'))       #DElmany to one z comment do recipe
     
-    def __init__(self, title, text, author_id, recipe_id):
-        self.title = title
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'))
+    recipe = db.relationship('Recipe', backref=db.backref('comments', lazy='dynamic'))       #DElmany to one z comment do recipe
+    
+    def __init__(self, text, taste, difficulty, author_id, recipe_id, date=None):
         self.text = text
+        self.taste = taste
+        self.difficulty = difficulty
         self.author_id = author_id
         self.recipe_id = recipe_id
-    
+        if date is None:
+            self.date = datetime.now()
+   
     def __repr__(self):
         return '<Comment: %r, with text: %r>' % (self.title, self.text)
+    
+    def to_json(self):
+        extra_content = {}
+        extra_content.update({'author_name': self.author.email})                
+        return to_json_dict(self, self.__class__, extra_content)
+    
 #End of 'Comment' class declaration
 
 
