@@ -28,6 +28,9 @@ class Signup(Resource):
     ###
     ### RESTful
     ###
+    def options(self):
+        return None
+
     def post(self):
         args = Signup.get_form_parser().parse_args()        
         try:

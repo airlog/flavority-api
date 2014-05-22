@@ -39,6 +39,7 @@ class Recipes(Resource):
         parser.add_argument('page', type=cast_natural, default=1)
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         parser.add_argument('user_id', type=int, default=None)
+        parser.add_argument('query', type=str)
         return parser.parse_args()
 
     def options(self):
@@ -56,12 +57,20 @@ class Recipes(Resource):
                 'totalElements': user.recipes.count(),
             }
         
+        query = Recipe.query
+
+        # search string in titles
+        if args['query'] is not None:
+            pattern = args['query'].lower()
+            query = query.filter(Recipe.dish_name.like('%{}%'.format(pattern)))
+
         # select proper sorting key
         query = {
             'id': lambda x: x,
             'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
             'rate': lambda x: x.order_by(Recipe.rank.desc())
-        }[args['sort_by']](Recipe.query)
+        }[args['sort_by']](query)
+        total_elements = query.count()
         query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
 
         # return short or standard form as requested
@@ -70,8 +79,7 @@ class Recipes(Resource):
 
         return {
             'recipes': list(map(func, query.all())),
-            'page': args['page'],
-            'totalElements': Recipe.query.count(),
+            'totalElements': total_elements,
         }
 
     @lm.auth_required
