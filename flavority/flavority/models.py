@@ -154,6 +154,14 @@ class User(db.Model, UserMixin):
         self.password = User.hash_pwd(User.combine(self.salt, password.encode()))
         if type is not None and type in User.USER_TYPES: self.type = User.USER_TYPES[type]
 
+    def to_json(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "recipes": self.recipes.count(),
+            "comments": self.comments.count(),
+        }
+
     def get_id(self):
         return self.id
 
