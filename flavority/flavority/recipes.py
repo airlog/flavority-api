@@ -5,7 +5,7 @@ from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 
 from . import lm, app
-from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation
+from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation, User
 from .util import Flavority, ViewPager
 
 
@@ -38,6 +38,7 @@ class Recipes(Resource):
         parser.add_argument('sort_by', type=cast_sort, default='id')
         parser.add_argument('page', type=cast_natural, default=1)
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
+        parser.add_argument('user_id', type=int, default=None)
         return parser.parse_args()
 
     def options(self):
@@ -46,6 +47,15 @@ class Recipes(Resource):
     def get(self):
         args = self.parse_get_arguments()
 
+        if args['user_id']:
+            user = User.query.filter(User.id == args['user_id']).first()
+            recipes = user.recipes.slice(args['page']*args['limit'], (args['page']+1)*args['limit'])
+            return {
+                'recipes': [r.to_json_short() for r in recipes],
+                'page': args['page'],
+                'totalElements': user.recipes.count(),
+            }
+        
         # select proper sorting key
         query = {
             'id': lambda x: x,
