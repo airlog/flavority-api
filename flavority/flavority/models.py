@@ -256,7 +256,7 @@ class Comment(db.Model):
             self.date = datetime.now()
    
     def __repr__(self):
-        return '<Comment: %r, with text: %r>' % (self.title, self.text)
+        return '<Commented by: %r,to recipe: %r, with text: %r>' % (self.author_id, self.recipe_id , self.text)
     
     def to_json(self):
         extra_content = {}
