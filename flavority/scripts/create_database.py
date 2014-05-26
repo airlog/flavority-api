@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 from json import loads
 
+import random
 import flavority
 from flavority.models import Recipe, Unit, Ingredient, IngredientAssociation, User, IngredientUnit
 
@@ -14,15 +15,20 @@ def add_recipes_to_database(db, recipes):
     from sys import stdout
     
     print(len(recipes))
-    user = User('ala@gmail.com', '123')
-    count = 0
+    if User.query.count() == 0:
+        user1 = User('ala@gmail.com', '123')
+        db.session.add(user1)
+        db.session.commit()
+    
+    count, users = 0, User.query.all()
     for r in recipes:
+        user = random.sample(users, 1)[0]
         count += 1
         stdout.write("\r{0:.2f}%".format(100.0*count/len(recipes)))
         try:
-            recipe = Recipe(r['name'], None, r['time'], r['directions'], 1, user)
+            recipe = Recipe(r['name'], r['time'], r['directions'], 1, user.id, None)
         except KeyError:
-            recipe = Recipe(r['name'], None, '-', r['directions'], 1, user) 
+            recipe = Recipe(r['name'], '-', r['directions'], 1, user.id, None)
                
         for i in r['ingredients']:
             unit_parts = i['amount'].split()
@@ -84,6 +90,5 @@ if __name__ == "__main__":
     
     text = text.replace(']\n[' , ',\n')
     recipes = loads(text)
-    flavority.app.db.drop_all()
     flavority.app.db.create_all()
     add_recipes_to_database(flavority.app.db, recipes)
