@@ -48,16 +48,10 @@ class Recipes(Resource):
     def get(self):
         args = self.parse_get_arguments()
 
-        if args['user_id']:
-            user = User.query.filter(User.id == args['user_id']).first()
-            recipes = user.recipes.slice(args['page']*args['limit'], (args['page']+1)*args['limit'])
-            return {
-                'recipes': [r.to_json_short() for r in recipes],
-                'page': args['page'],
-                'totalElements': user.recipes.count(),
-            }
-        
         query = Recipe.query
+        # only recipes from given user
+        if args['user_id']:
+            query = query.filter(Recipe.author_id == args['user_id'])
 
         # search string in titles
         if args['query'] is not None:

@@ -30,5 +30,6 @@ parser.add_argument("-n", "--number",
 if __name__ == "__main__":
     args = parser.parse_args()
     if args.amount:
-    	add_users_to_database(flavority.app.db, args.amount)
+        flavority.app.db.create_all()
+        add_users_to_database(flavority.app.db, args.amount)
     exit(0)
