@@ -20,9 +20,9 @@ def add_recipes_to_database(db, recipes):
         count += 1
         stdout.write("\r{0:.2f}%".format(100.0*count/len(recipes)))
         try:
-            recipe = Recipe(r['name'], None, r['time'], r['directions'], 1, user)
+            recipe = Recipe(r['name'], r['time'], r['directions'], 1, None)
         except KeyError:
-            recipe = Recipe(r['name'], None, '-', r['directions'], 1, user) 
+            recipe = Recipe(r['name'], '-', r['directions'], 1, None)
                
         for i in r['ingredients']:
             unit_parts = i['amount'].split()
