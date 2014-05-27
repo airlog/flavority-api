@@ -15,6 +15,7 @@ def add_recipes_to_database(db, recipes):
     from sys import stdout
     
     print(len(recipes))
+    rates = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
     if User.query.count() == 0:
         user1 = User('ala@gmail.com', '123')
         db.session.add(user1)
@@ -26,9 +27,9 @@ def add_recipes_to_database(db, recipes):
         count += 1
         stdout.write("\r{0:.2f}%".format(100.0*count/len(recipes)))
         try:
-            recipe = Recipe(r['name'], r['time'], r['directions'], 1, user.id, None)
+            recipe = Recipe(r['name'], r['time'], r['directions'], 1, random.sample(rates, 1)[0], user.id, None)
         except KeyError:
-            recipe = Recipe(r['name'], '-', r['directions'], 1, user.id, None)
+            recipe = Recipe(r['name'], '-', r['directions'], 1, random.sample(rates, 1)[0], user.id, None)
                
         for i in r['ingredients']:
             unit_parts = i['amount'].split()

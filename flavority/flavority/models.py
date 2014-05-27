@@ -125,6 +125,9 @@ class User(db.Model, UserMixin):
     salt  = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     password = db.Column(db.String(PASSWORD_LENGTH), nullable = False)
     type = db.Column(db.Enum(*tuple(USER_TYPES.values()), name = USER_TYPE_ENUM_NAME), default = USER_TYPES[USER_TYPE_COMMON])
+    register_date = db.Column(db.DateTime)
+    last_seen_date = db.Column(db.DateTime)
+    
 #    token = db.Column(db.String(TOKEN_LENGTH), default=None)
     favourites = db.relationship('Recipe', secondary=favour_recipes)
 
@@ -144,7 +147,7 @@ class User(db.Model, UserMixin):
     def is_valid_email(text):
         return User.EMAIL_REGEX.match(text) is not None
        
-    def __init__(self, email, password, type = None):
+    def __init__(self, email, password, type = None, register_date = None, last_seen_date = None):
         # validate arguments
         if not User.is_valid_email(email): raise ValueError()
         
@@ -153,18 +156,36 @@ class User(db.Model, UserMixin):
         self.salt = hexlify(User.gen_salt())
         self.password = User.hash_pwd(User.combine(self.salt, password.encode()))
         if type is not None and type in User.USER_TYPES: self.type = User.USER_TYPES[type]
+        if register_date is None:
+            self.register_date = datetime.now()
+        if last_seen_date is None:
+            self.last_seen_date = self.register_date
 
     def to_json(self):
         return {
             "id": self.id,
             "email": self.email,
+            "register_date": self.register_date.isoformat(),
+            "last_seen_date": self.last_seen_date.isoformat(),
             "recipes": self.recipes.count(),
             "comments": self.comments.count(),
+            "average_rate": self.count_average_rate()
         }
 
     def get_id(self):
         return self.id
 
+    def count_average_rate(self):
+        sum_rate = 0
+        sum_count = 0
+        for recipe in self.recipes:
+            sum_rate += recipe.taste_comments * recipe.comments.count()
+            sum_count += recipe.comments.count()
+        if sum_count == 0:
+            return 0
+        else:
+            return sum_rate/sum_count
+            
     def __repr__(self):
         return '<User: %r, with password: %r and email: %r>' % (self.id,  self.password, self.email)
 #End of 'User' class declaration
@@ -183,9 +204,9 @@ class Recipe(db.Model):
     creation_date = db.Column(db.DateTime)
     preparation_time = db.Column(db.SmallInteger)
     recipe_text = db.Column(db.Text)
-    tasteMark = db.Column(db.Float)
-    difficultyMark = db.Column(db.Float)
-    rank = db.Column(db.Float)
+    difficulty = db.Column(db.Float)
+    taste_comments = db.Column(db.Float)
+    difficulty_comments = db.Column(db.Float)
     eventToAdminControl = db.Column(db.Boolean)
     portions = db.Column(db.SmallInteger)
 
@@ -193,7 +214,7 @@ class Recipe(db.Model):
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=tag_assignment)
 
-    def __init__(self, dish_name, preparation_time, recipe_text, portions, author_id, creation_date=None):
+    def __init__(self, dish_name, preparation_time, recipe_text, portions, difficulty, author_id, creation_date=None):
         self.dish_name = dish_name
         if creation_date is None:
             self.creation_date = datetime.now()
@@ -201,6 +222,9 @@ class Recipe(db.Model):
         self.recipe_text = recipe_text
         self.portions = portions
         self.author_id = author_id
+        self.difficulty = difficulty
+        self.taste_comments = 0;
+        self.difficulty_comments = 0;
     
     def __repr__(self):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
@@ -212,7 +236,7 @@ class Recipe(db.Model):
             "dishname": self.dish_name,
             "creation_date": str(self.creation_date),
             "photos": list(map(lambda x: get_photo(x), self.photos)),
-            "rank": self.rank if self.rank is not None else 0.0,
+            "rank": self.taste_comments if self.taste_comments is not None else 0.0,
             "tags": [i.json for i in self.tags],
         }
 
@@ -225,6 +249,26 @@ class Recipe(db.Model):
         extra_content.update(ingredients)
         extra_content.update({'author_name': self.author.email})                
         return to_json_dict(self, self.__class__, extra_content)
+
+    
+    def count_taste(self):
+        sum = 0
+        for comment in self.comments:
+            sum += comment.taste
+        if (self.comments.count() == 0):
+            self.taste_comments = 0
+        else:
+            self.taste_comments = sum/self.comments.count()
+
+    def count_difficulty(self):
+        sum = 0
+        for comment in self.comments:
+            sum += comment.difficulty
+        if (self.comments.count() == 0):
+            self.difficulty_comments = 0
+        else:
+            self.difficulty_comments = sum/self.comments.count()
+            
 #End of 'Recipe' class declaration
 
 
@@ -383,3 +427,4 @@ class Photo(db.Model):
     @staticmethod
     def supported_formats():
         return Photo.FORMAT_ENUM
+        

@@ -62,7 +62,7 @@ class Recipes(Resource):
         query = {
             'id': lambda x: x,
             'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
-            'rate': lambda x: x.order_by(Recipe.rank.desc())
+            'rate': lambda x: x.order_by(Recipe.taste_comments.desc())
         }[args['sort_by']](query)
         total_elements = query.count()
         query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])

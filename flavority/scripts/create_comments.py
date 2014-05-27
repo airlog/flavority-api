@@ -28,8 +28,12 @@ def add_comments_to_database(db, n):
         comment = Comment(text, taste, difficulty, user.id, recipe.id)
         db.session.add(comment)
     db.session.commit()
-    
 
+    for recipe in recipes:
+        recipe.count_taste()        
+        recipe.count_difficulty()
+    db.session.commit()   
+        
 parser = ArgumentParser(description = __desc__)
 parser.add_argument("-n", "--number",
         type = int,
