@@ -70,10 +70,20 @@ parser = ArgumentParser(description = __desc__)
 parser.add_argument("-i", "--input",
         type = str,
         dest = "file",
-        help = "specify input file, by default application reads from STDIN"
-    )
+        help = "specify input file, by default application reads from STDIN")
+parser.add_argument('-n', '--amount',
+        type = int,
+        dest = 'amount',
+        default = None,
+        help = 'number of recipes to insert')
+parser.add_argument('-O', '--offset',
+        type = int,
+        dest = 'offset',
+        default = 0,
+        help = 'start counting after this number of recipes')
 
 if __name__ == "__main__":
+    from sys import exit
     args = parser.parse_args()
 	
     text = None
@@ -87,8 +97,11 @@ if __name__ == "__main__":
     if text is None:
         file = stdin
         text = file.read()
-    
+
     text = text.replace(']\n[' , ',\n')
-    recipes = loads(text)
+    recipes = loads(text)[args.offset:(args.offset + args.amount)]
     flavority.app.db.create_all()
     add_recipes_to_database(flavority.app.db, recipes)
+
+    exit(0)
+
