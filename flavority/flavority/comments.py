@@ -16,11 +16,9 @@ class Comments(Resource):
         parser.add_argument('id', type=int, requred=True, help="comment id")
         parser.add_argument('author_id', type=int, required=True, help="comment author id")
         parser.add_argument('recipe_id', type=int, required=True, help="comment recipe id")
-        parser.add_argument('title', type=str, required=False, help="comment title")
-        parser.add_argument('text', type=str, required=False, help="comment text")
-        #Co z Rate? Jest osobny model w bazie, ale były głosy, żeby wrzucić do commentów, więc wrzucam tutaj; ponadto ustawiam, że tekst komentarza nie jest konieczny (analogicznie do AppStore i GooglePlay -wystawiasz komentarz i uzupełniasz samą ocenę, bez treści)
-        parser.add_argument('taste_rate', type=float, required=True, help="taste rate")
-        parser.add_argument('difficulty_rate', type=float, required=True, help="difficulty rate")
+        parser.add_argument('text', type=str, required=True, help="comment text")
+        parser.add_argument('difficulty', type=float, required=False, help="given difficulty")
+        parser.add_argument('taste', type=float, required=False, help="given taste")
 
         return parser
 
@@ -61,7 +59,7 @@ class Comments(Resource):
     def post(self):
         args = Comments.get_form_parser().parse_args()
         
-        comment = Comment(args.text, args.taste_rate, args.difficulty_rate, args.author_id, args.recipe_id)
+        comment = Comment(args.text, args.taste, args.difficulty, args.author_id, args.recipe_id)
             #Ew. tutaj można tworzyć strukturę Rate, aby nie tworzyć do tego js-ów w backbonie
         try:
             app.db.session.add(comment)
@@ -86,9 +84,8 @@ class Comments(Resource):
 
     #Method handles comment edition
     @lm.auth_required
-    def edit(self, comment_id, new_title, new_text):
+    def edit(self, comment_id, new_text):   #zakladam, ze nie mozna zmienic oceny tylko sam tekst komentarza!!
         comment = self.get_comment(comment_id)      #same note as in $delete$ method -> will search for proper comment (only author can edit)
-        comment.title = new_title
         comment.text = new_text
         try:
             app.db.session.commit()

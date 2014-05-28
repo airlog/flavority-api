@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 from json import loads
 
+import random
 import flavority
 from flavority.models import Recipe, Unit, Ingredient, IngredientAssociation, User, IngredientUnit
 
@@ -14,15 +15,20 @@ def add_recipes_to_database(db, recipes):
     from sys import stdout
     
     print(len(recipes))
-    user = User('ala@gmail.com', '123')
-    count = 0
+    if User.query.count() == 0:
+        user1 = User('ala@gmail.com', '123')
+        db.session.add(user1)
+        db.session.commit()
+    
+    count, users = 0, User.query.all()
     for r in recipes:
+        user = random.sample(users, 1)[0]
         count += 1
         stdout.write("\r{0:.2f}%".format(100.0*count/len(recipes)))
         try:
-            recipe = Recipe(r['name'], None, r['time'], r['directions'], 1, user)
+            recipe = Recipe(r['name'], r['time'], r['directions'], 1, user.id, None)
         except KeyError:
-            recipe = Recipe(r['name'], None, '-', r['directions'], 1, user) 
+            recipe = Recipe(r['name'], '-', r['directions'], 1, user.id, None)
                
         for i in r['ingredients']:
             unit_parts = i['amount'].split()
@@ -64,10 +70,20 @@ parser = ArgumentParser(description = __desc__)
 parser.add_argument("-i", "--input",
         type = str,
         dest = "file",
-        help = "specify input file, by default application reads from STDIN"
-    )
+        help = "specify input file, by default application reads from STDIN")
+parser.add_argument('-n', '--amount',
+        type = int,
+        dest = 'amount',
+        default = None,
+        help = 'number of recipes to insert')
+parser.add_argument('-O', '--offset',
+        type = int,
+        dest = 'offset',
+        default = 0,
+        help = 'start counting after this number of recipes')
 
 if __name__ == "__main__":
+    from sys import exit
     args = parser.parse_args()
 	
     text = None
@@ -81,9 +97,11 @@ if __name__ == "__main__":
     if text is None:
         file = stdin
         text = file.read()
-    
+
     text = text.replace(']\n[' , ',\n')
-    recipes = loads(text)
-    flavority.app.db.drop_all()
+    recipes = loads(text)[args.offset:(args.offset + args.amount)]
     flavority.app.db.create_all()
     add_recipes_to_database(flavority.app.db, recipes)
+
+    exit(0)
+
