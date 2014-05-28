@@ -16,8 +16,11 @@ class Comments(Resource):
         parser.add_argument('id', type=int, requred=True, help="comment id")
         parser.add_argument('author_id', type=int, required=True, help="comment author id")
         parser.add_argument('recipe_id', type=int, required=True, help="comment recipe id")
-        parser.add_argument('title', type=str, required=True, help="comment title")
-        parser.add_argument('text', type=str, required=True, help="comment text")
+        parser.add_argument('title', type=str, required=False, help="comment title")
+        parser.add_argument('text', type=str, required=False, help="comment text")
+        #Co z Rate? Jest osobny model w bazie, ale były głosy, żeby wrzucić do commentów, więc wrzucam tutaj; ponadto ustawiam, że tekst komentarza nie jest konieczny (analogicznie do AppStore i GooglePlay -wystawiasz komentarz i uzupełniasz samą ocenę, bez treści)
+        parser.add_argument('taste_rate', type=float, required=True, help="taste rate")
+        parser.add_argument('difficulty_rate', type=float, required=True, help="difficulty rate")
 
         return parser
 
@@ -53,7 +56,20 @@ class Comments(Resource):
         except:
             abort(404, message="Comment with id: {} does not exist!".format(comment_id))
 
-    #TODO: Implementation of comment_post() method
+    #Method to add new comment
+    @lm.auth_required
+    def post(self):
+        args = Comments.get_form_parser().parse_args()
+        
+        comment = Comment(args.text, args.taste_rate, args.difficulty_rate, args.author_id, args.recipe_id)
+            #Ew. tutaj można tworzyć strukturę Rate, aby nie tworzyć do tego js-ów w backbonie
+        try:
+            app.db.session.add(comment)
+            app.db.session.commit()
+        except SQLAlchemyError:
+            app.db.session.rollback()
+            return Flavority.failure(), 500
+        return Flavority.success(), 201
 
     #Method handles comment deletion
     @lm.auth_required
