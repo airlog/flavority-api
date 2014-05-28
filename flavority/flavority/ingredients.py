@@ -18,5 +18,5 @@ class IngredientsResource(Resource):
         """
         Returns a list of all ingredients in database ordered by name.
         """
-        return [{'id': ingr.id, 'name': ingr.name} for ingr in Ingredient.query.order_by(Ingredient.name).all()]
+        return [{'id': ingr.id, 'name': ingr.name} for ingr in Ingredient.query.order_by(func.lower(Ingredient.name)).all()]
 
