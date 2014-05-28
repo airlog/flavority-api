@@ -136,6 +136,9 @@ class Comments(Resource):
         try:
             app.db.session.add(comment)
             app.db.session.commit()
+            recipe.count_taste()
+            recipe.count_difficulty()
+            app.db.session.commit()
         except SQLAlchemyError as e:
             app.logger.error(e)
             return {
