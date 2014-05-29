@@ -40,7 +40,7 @@ class Recipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         parser.add_argument('user_id', type=int, default=None)
         parser.add_argument('query', type=str)
-        parser.add_argument('advanced', type=str, default=None)
+        parser.add_argument('advanced', type=cast_bool, default=False)
         return parser.parse_args()
 
     def options(self):
