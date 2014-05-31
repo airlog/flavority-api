@@ -212,7 +212,7 @@ class Recipe(db.Model):
 
     author = db.relationship('User', backref=db.backref('recipes', lazy='dynamic'))
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
-    tags = db.relationship('Tag', secondary=tag_assignment)
+    tags = db.relationship('Tag', secondary=tag_assignment, backref=db.backref('recipes', lazy='dynamic'))
 
     def __init__(self, dish_name, preparation_time, recipe_text, portions, difficulty, author_id, creation_date=None):
         self.dish_name = dish_name

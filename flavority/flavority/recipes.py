@@ -1,5 +1,6 @@
 
 import traceback
+from functools import reduce
 
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
@@ -40,6 +41,7 @@ class Recipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         parser.add_argument('user_id', type=int, default=None)
         parser.add_argument('query', type=str)
+        parser.add_argument('tag_id', type=int, default=None, action='append')
         parser.add_argument('advanced', type=cast_bool, default=False)
         return parser.parse_args()
 
@@ -55,6 +57,17 @@ class Recipes(Resource):
 #          funkcja do napisania dla Patryka
 #           w query znajduje sie lista skladnikow
            return #advancedSearch(args['query'], args['page'], args['limit'])
+
+        # only recipes containg at least one of the requested tags
+        #   this piece of code may require an explanation:
+        #       the idea is to take all recipes marked with a given tag (one) and union results
+        #       in order to avoid None objects they're filtered out
+        if args.tag_id is not None:
+            query = reduce(
+                lambda q1, q2: q1.union(q2),
+                map(
+                    lambda tag: tag.recipes,
+                    filter(lambda x: x is not None, [Tag.query.get(i) for i in args.tag_id])))
 
         # only recipes from given user
         if args['user_id']:
