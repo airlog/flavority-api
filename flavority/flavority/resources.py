@@ -1,6 +1,4 @@
 
-from flask.ext.restful.utils import cors
-
 from . import app
 from .recipes import RecipesWithId, Recipes
 from .signing import Signup, Signin
@@ -10,8 +8,6 @@ from .ingredients import IngredientsResource
 from .photos import PhotoResource
 from .users import UserById
 
-
-app.restapi.decorators = [cors.crossdomain(origin='*', headers=['X-Requested-With', 'Content-Type'])]
 
 app.restapi.add_resource(Signup, "/auth/signup")
 app.restapi.add_resource(Signin, "/auth/signin")

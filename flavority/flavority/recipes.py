@@ -186,8 +186,7 @@ class RecipesWithId(Resource):
 
         return Flavority.success()
 
-
-    def options(self):
+    def options(self, recipe_id=None):
         return None
 
     @staticmethod
