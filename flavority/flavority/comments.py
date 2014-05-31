@@ -129,7 +129,7 @@ class Comments(Resource):
         if user is None:
             from flavority.models import User
             user = User.query.first()
-            return abort(500)
+            app.logger.debug('No user has been detected! For debug purposes using user: {}'.format(user))
 
         # creating new comment
         comment = Comment(args.text, args.taste, args.difficulty, user.get_id(), recipe.id)
