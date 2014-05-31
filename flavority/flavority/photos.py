@@ -1,7 +1,9 @@
 
-from base64 import b64encode
+from base64 import b64encode, b64decode
+from io import SEEK_SET
+from tempfile import NamedTemporaryFile
 
-from flask import abort, request
+from flask import abort, send_file
 from flask.ext.restful import Resource, reqparse
 from sqlalchemy.exc import SQLAlchemyError
 from wand.image import Image
@@ -61,7 +63,7 @@ class PhotoResource(Resource):
         parser.add_argument('recipe_id', required=True, type=int)
         return parser.parse_args()
 
-    def options(self):
+    def options(self, photo_id=None):
         return None
 
     def get(self, photo_id=None):
@@ -83,7 +85,11 @@ class PhotoResource(Resource):
         if image is None:
             return abort(404)
 
-        return image.full_data.decode() if not args['mini'] else image.mini_data.decode()
+        file = NamedTemporaryFile(prefix='img{}'.format(photo_id), suffix='.jpg', dir=app.config['TEMPDIR'])
+        file.write(b64decode(image.full_data if not args['mini'] else image.mini_data))
+        file.seek(0, SEEK_SET)
+
+        return send_file(file, mimetype='image/jpeg')
 
     def post(self, photo_id=None):
         """
@@ -98,6 +104,7 @@ class PhotoResource(Resource):
         HTTP405 is returned. It may also return HTTP500 when adding to the database
         fails.
         """
+
         if photo_id is not None:
             return abort(405)
 

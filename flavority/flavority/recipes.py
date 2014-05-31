@@ -1,13 +1,16 @@
 
 import traceback
 from functools import reduce
+from os.path import abspath, join
 
+from flask import request
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 
 from . import lm, app
 from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation, User
 from .util import Flavority, ViewPager
+from .photos import PhotoResource
 
 
 class Recipes(Resource):
@@ -89,7 +92,8 @@ class Recipes(Resource):
 
         # return short or standard form as requested
         func = lambda x: x.to_json()
-        if args['short']: func = lambda x: x.to_json_short(get_photo=lambda photo: photo.mini_data.decode())
+        if args['short']:
+            func = lambda x: x.to_json_short(get_photo=lambda photo: photo.id)
 
         return {
             'recipes': list(map(func, query.all())),
