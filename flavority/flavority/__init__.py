@@ -18,10 +18,33 @@ def load_config(a, package = None):
 
     :param a:   flask's application object
     """
+
+    def paths_to_abs(cfg):
+        import os.path
+
+        pathKeys = ['APPLICATION_ROOT', 'TEMPDIR']
+        for key in pathKeys:
+            cfg[key] = os.path.abspath(cfg[key])
+
+    def create_directories(cfg):
+        import os
+        import os.path
+
+        dirKeys = ['TEMPDIR']
+        for key in dirKeys:
+            if not os.path.exists(cfg[key]):
+                os.mkdir(cfg[key])
+            elif not os.path.isdir(cfg[key]):
+                raise RuntimeError('Not a directory {}'.format(cfg[key]))
+
     if package is None: package = __name__
+
     a.config.from_object("{}.config".format(package))     # default settings
     try: a.config.from_envvar(__envvar__)                 # override defaults
     except RuntimeError: pass
+
+    paths_to_abs(a.config)
+    create_directories(a.config)
 
 
 def load_database(a):
