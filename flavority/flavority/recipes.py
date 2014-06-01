@@ -48,6 +48,43 @@ class Recipes(Resource):
         parser.add_argument('advanced', type=cast_bool, default=False)
         return parser.parse_args()
 
+    @staticmethod
+    def get_form_parser():
+        parser = reqparse.RequestParser()
+        parser.add_argument('dish_name', type=str, required=True, help="dish name")
+        parser.add_argument('recipe_text', type=str, required=True, help="recipe text")
+        parser.add_argument('preparation_time', type=int, required=True, help="preparation time")
+        parser.add_argument('portions', type=int, required=True, help="portions")
+        parser.add_argument('tags', type=list, required=False, help="tags", action="append")
+        parser.add_argument('ingredients', type=list, required=True, help="ingredients")
+
+        return parser
+
+    @staticmethod
+    def add_ingredients(recipe, ingredients):
+        if ingredients is not None:
+            ingredient_id_to_amount = {association["ingr_id"]: association["amount"] for association in ingredients}
+            available_ingredients = Ingredient\
+                .query\
+                .filter(Ingredient.id.in_(','.join([str(assoc["ingr_id"]) for assoc in ingredients])))\
+                .all()
+
+            if len(ingredient_id_to_amount) != len(available_ingredients):
+                abort(500, message="Not all ingredients are present in the database")
+
+            recipe.ingredients = []
+
+            for ingr in available_ingredients:
+                assoc = IngredientAssociation()
+                assoc.ingredient = ingr
+                assoc.amount = ingredient_id_to_amount[ingr.id]
+                recipe.ingredients.append(assoc)
+
+    @staticmethod
+    def add_tags(recipe, tags):
+        if tags is not None:
+            recipe.tags = Tag.query.filter(Tag.id.in_(','.join([str(i) for i in tags]))).all()
+
     def options(self):
         return None
 
@@ -121,45 +158,46 @@ class Recipes(Resource):
 
         return Flavority.success(), 201
 
+
+class RecipesWithId(Resource):
+
+    @staticmethod
+    def get_recipe_by_id(recipe_id):
+        try:
+            return Recipe.query.filter(Recipe.id == recipe_id).one()
+        except:
+            abort(404, message="Recipe with id {} doesn't exist".format(recipe_id))
+
+    @staticmethod
+    def update_if_set(recipe, args, field):
+        field_value = getattr(args, field)
+        if field_value is not None:
+            setattr(recipe, field, field_value)
+
     @staticmethod
     def get_form_parser():
         parser = reqparse.RequestParser()
-        parser.add_argument('dish_name', type=str, required=True, help="dish name")
-        parser.add_argument('recipe_text', type=str, required=True, help="recipe text")
-        parser.add_argument('preparation_time', type=int, required=True, help="preparation time")
-        parser.add_argument('portions', type=int, required=True, help="portions")
-        parser.add_argument('tags', type=list, required=False, help="tags", action="append")
-        parser.add_argument('ingredients', type=list, required=True, help="ingredients")
+        parser.add_argument('dish_name', type=str, help="dish name")
+        parser.add_argument('recipe_text', type=str, help="recipe text")
+        parser.add_argument('preparation_time', type=int, help="preparation time")
+        parser.add_argument('portions', type=int, help="portions")
+        parser.add_argument('tags', type=int, help="tags", action="append")
+        parser.add_argument('ingredients', type=list, help="ingredients")
 
         return parser
 
     @staticmethod
-    def add_ingredients(recipe, ingredients):
-        if ingredients is not None:
-            ingredient_id_to_amount = {association["ingr_id"]: association["amount"] for association in ingredients}
-            available_ingredients = Ingredient\
-                .query\
-                .filter(Ingredient.id.in_(','.join([str(assoc["ingr_id"]) for assoc in ingredients])))\
-                .all()
+    def get_recipe_with_tags(tag_list):
+        if len(tag_list) > 0:
+            try:
+                return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
+            except:
+                abort(404, message="No recipes with given tags!")
+        else:
+            return -1   # Error
 
-            if len(ingredient_id_to_amount) != len(available_ingredients):
-                abort(500, message="Not all ingredients are present in the database")
-
-            recipe.ingredients = []
-
-            for ingr in available_ingredients:
-                assoc = IngredientAssociation()
-                assoc.ingredient = ingr
-                assoc.amount = ingredient_id_to_amount[ingr.id]
-                recipe.ingredients.append(assoc)
-
-    @staticmethod
-    def add_tags(recipe, tags):
-        if tags is not None:
-            recipe.tags = Tag.query.filter(Tag.id.in_(','.join([str(i) for i in tags]))).all()
-
-
-class RecipesWithId(Resource):
+    def options(self, recipe_id=None):
+        return None
 
     def get(self, recipe_id):
         return RecipesWithId.get_recipe_by_id(recipe_id).to_json()
@@ -202,52 +240,3 @@ class RecipesWithId(Resource):
             return Flavority.failure(), 500
 
         return Flavority.success()
-
-    def options(self, recipe_id=None):
-        return None
-
-    @staticmethod
-    def get_recipe_by_id(recipe_id):
-        try:
-            return Recipe.query.filter(Recipe.id == recipe_id).one()
-        except:
-            abort(404, message="Recipe with id {} doesn't exist".format(recipe_id))
-
-    @staticmethod
-    def update_if_set(recipe, args, field):
-        field_value = getattr(args, field)
-        if field_value is not None:
-            setattr(recipe, field, field_value)
-
-    @staticmethod
-    def get_form_parser():
-        parser = reqparse.RequestParser()
-        parser.add_argument('dish_name', type=str, help="dish name")
-        parser.add_argument('recipe_text', type=str, help="recipe text")
-        parser.add_argument('preparation_time', type=int, help="preparation time")
-        parser.add_argument('portions', type=int, help="portions")
-        parser.add_argument('tags', type=int, help="tags", action="append")
-        parser.add_argument('ingredients', type=list, help="ingredients")
-
-        return parser
-
-    @staticmethod
-    def get_recipe_with_tags(tag_list):
-        if len(tag_list) > 0:
-            try:
-                return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
-            except:
-                abort(404, message="No recipes with given tags!")
-        else:
-            return -1       #Error!
-
-
-    # @staticmethod
-    # def get_recipe_with_ingredients(ingredient_list):
-    #     if len(ingredient_list) > 0:
-    #         try:
-    #             return Recipe.query.join(ingredient_assignment).filter(ingredient_assignment.ingr.in_(ingredient_list)).all()
-    #         except:
-    #             abort(404, message="No recipes with given ingredients!")
-    #     else:
-    #         return -1       #ERROR!!
