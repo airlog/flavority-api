@@ -6,6 +6,7 @@ from .comments import Comments
 from .tags import TagsResource
 from .ingredients import IngredientsResource
 from .photos import PhotoResource
+from .units import UnitResource
 from .users import UserById
 
 
@@ -18,6 +19,7 @@ app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>")
 app.restapi.add_resource(Comments, '/comments/')
 app.restapi.add_resource(TagsResource, '/tags/')
 app.restapi.add_resource(IngredientsResource, '/ingredients/')
+app.restapi.add_resource(UnitResource, '/units/')
 
 app.restapi.add_resource(PhotoResource,
                          '/photos/',

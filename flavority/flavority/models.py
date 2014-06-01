@@ -374,6 +374,12 @@ class Unit(db.Model):
     
     def __repr__(self):
         return '<Unit : %r, with value : %r>' % (self.unit_name, self.unit_value)
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.unit_name,
+        }
 #End of 'Unit' class declaration
 
 
