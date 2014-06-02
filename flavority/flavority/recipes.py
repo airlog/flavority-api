@@ -60,9 +60,8 @@ class Recipes(Resource):
             raise ValueError('can not cast \'{}\' to difficulty'.format(val))
 
         def cast_ingredients(val):
-            res, data = [], json_loads(b64decode(val).decode())
-            app.logger.debug(data)
-            for ele in data:
+            res = []
+            for ele in val:
                 ingr_id, amount, unit = ele[0], ele[1], ele[2]
                 res.append((ingr_id, amount, unit))
             return res
@@ -73,9 +72,10 @@ class Recipes(Resource):
         parser.add_argument('preparation_time', type=int, required=True, help="preparation time in minutes")
         parser.add_argument('portions', type=int, required=True, help="portions info is missing")
         parser.add_argument('difficulty', type=cast_difficulty, required=True, help='difficulty is missing')
-        parser.add_argument('ingredients', type=cast_ingredients, required=True, help="ingredients are missing")    # base64 encoded JSON list of lists
-        parser.add_argument('tag', type=str, action="append", help="tag is missing", default=[])
-        parser.add_argument('photo_id', type=int, action='append', default=[])
+        parser.add_argument('ingredients', type=cast_ingredients, required=True, help="ingredients are missing")
+        parser.add_argument('tags', type=list, default=[])
+        parser.add_argument('photos', type=list, default=[])
+        parser.add_argument('remove_photos', type=list, default=[])
 
         return parser.parse_args()
 
@@ -182,6 +182,14 @@ class Recipes(Resource):
                 if photo.recipe is not None: return abort(403)
                 rcp.photos.append(photo)
 
+        def remove_unused_photos(photo_ids):
+            if photo_ids is None: return
+            for pid in photo_ids:
+                photo = Photo.query.get(pid)
+                if photo is None: continue
+                if photo.recipe is None or photo.recipe_id is None:
+                    app.db.session.delete()
+
         args, user = self.parse_post_arguments(), lm.get_current_user()
         if user is None:
             user = User.query.first()
@@ -194,9 +202,10 @@ class Recipes(Resource):
             args.portions,
             args.difficulty,
             user.id)
-        add_tags(recipe, args.tag)
+        add_tags(recipe, args.tags)
         add_ingredients(recipe, args.ingredients)
-        add_photos(recipe, args.photo_id)
+        add_photos(recipe, args.photos)
+        remove_unused_photos(args.remove_photos)
 
         try:
             app.db.session.add(recipe)
