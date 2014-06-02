@@ -424,7 +424,7 @@ class Photo(db.Model):
     __tablename__ = 'Photo'
 
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), nullable=True)
     full_data = db.Column(db.LargeBinary, nullable=False)
     mini_data = db.Column(db.LargeBinary, nullable=True)
 
@@ -433,4 +433,4 @@ class Photo(db.Model):
     @staticmethod
     def supported_formats():
         return Photo.FORMAT_ENUM
-        
+
