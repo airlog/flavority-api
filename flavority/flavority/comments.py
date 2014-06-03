@@ -10,8 +10,22 @@ from .models import Comment, Recipe
 from .util import Flavority, ViewPager
 
 
+##Class that contains comment's methods such as:
+#get,
+#post,
+#delete,
+#put
+#and many more needed in connection with website.
 class Comments(Resource):
 
+    ##Returns fields given in parser
+    #Fields needed for comment:
+    #id - user id,
+    #author_id - comment's author id
+    #recipe_id - id of commented recipe
+    #text - comment's body (held as a markdown)
+    #difficulty - voted recipe's difficulty in making
+    #taste - voted recipe's taste
     @staticmethod
     def get_form_parser():
         parser = reqparse.RequestParser()
@@ -24,6 +38,11 @@ class Comments(Resource):
 
         return parser
 
+    ##Returns fields given in parser (to display comments on several pages if needed).
+    #Fields:
+    #recipe_id - ID of recipe in database
+    #page - number of a page to display
+    #limit - amount of comments per page
     @staticmethod
     def parse_get_arguments():
         def cast_bool(x):
@@ -51,7 +70,7 @@ class Comments(Resource):
         except:
             abort(404, message="Author with id: {} has no comments!".format(author_id))
 
-    #Implemented to get all Recipe's comments
+    ##Implemented to get all Recipe's comments
     @staticmethod
     def get_recipe_comments(recipe_id):
         try:
@@ -59,7 +78,7 @@ class Comments(Resource):
         except:
             abort(404, message="Recipe with id: {} has no comments yet!".format(recipe_id))
 
-    #Implemented to get specific comment with given comment_id, author_id and recipe_id
+    ##Implemented to get specific comment with given comment_id, author_id and recipe_id
     @staticmethod
     def get_comment(comment_id, author_id, recipe_id):
         try:
@@ -67,7 +86,7 @@ class Comments(Resource):
         except:
             abort(404, message="Comment with id: {} does not exist!".format(comment_id))
 
-    # get all comments about user's recipes
+    ##Method implemented to return specific comment with given comment_id, author_id and recipe_id
     @staticmethod
     def get_user_recipes_comments(user):
         try:
@@ -76,6 +95,12 @@ class Comments(Resource):
             app.logger.error(e)
             abort(404, message="Author with id: {} has no comments!".format(user.id))
 
+    ##Method implemented to handle assessments given while comment POST.
+    #It prevents from:
+    #posting without difficulty chosen,
+    #posting without taste assessment,
+    #posting with no text,
+    #posting for a bad recipe ids
     @staticmethod
     def parse_post_arguments():
         def mark(x):
@@ -95,9 +120,17 @@ class Comments(Resource):
                 help='missing recipe\'s id')
         return parser.parse_args()
 
+    ##Handles options for HTTP request
     def options(self):
         return None
 
+    ##Method handles comment deletion:
+    #Arguments needed:
+    #comment_id - ID of comment to delete,
+    #author_id - ID of author that wants to delete comment,
+    #recipe_id - ID of recipe which was commented
+    #Method prevents from deleting someones else comment.
+    #It may return failure() if deletion was unsuccessful.
     #Method handles comment deletion
     @lm.auth_required
     def delete(self, comment_id, author_id, recipe_id):
@@ -111,10 +144,15 @@ class Comments(Resource):
             return Flavority.failure()
         return Flavority.success()
 
-    #Method handles comment edition
+    ##Method handles comment edition
+    #Arguments:
+    #comment_id - ID of comment to edit,
+    #new_text - new comment's text
+    #Warning: You cannot change given difficulty or taste assessment!
+    #It may return failure() it action will fail.
     @lm.auth_required
-    def put(self, comment_id, new_text):   #zakladam, ze nie mozna zmienic oceny tylko sam tekst komentarza!!
-        comment = self.get_comment(comment_id)      #same note as in $delete$ method -> will search for proper comment (only author can edit)
+    def put(self, comment_id, new_text):
+        comment = self.get_comment(comment_id)
         comment.text = new_text
         try:
             app.db.session.commit()
@@ -123,6 +161,7 @@ class Comments(Resource):
             return Flavority.failure()
         return Flavority.success()
 
+    ##Method handles HTTP GET statement.
     def get(self):
         args = self.parse_get_arguments()
 
@@ -148,6 +187,7 @@ class Comments(Resource):
         }
 
 #    @lm.auth_required
+    ##Method handles HTTP POST statement.
     def post(self):
         args = self.parse_post_arguments()
         user, recipe = lm.get_current_user(), Recipe.query.get(args.recipe)

@@ -7,10 +7,12 @@ from .models import Tag, tag_assignment
 from .util import ViewPager
 
 
+##Class handles Tag's operations
 class TagsResource(Resource):
-
+    ##Class handles Tag's operations
     GET_ITEMS_PER_PAGE = 30
 
+    ##Method gets arguments from parser
     @staticmethod
     def parse_get_arguments():
         def cast_natural(x):
@@ -23,9 +25,11 @@ class TagsResource(Resource):
         parser.add_argument('limit', type=cast_natural, default=TagsResource.GET_ITEMS_PER_PAGE)
         return parser.parse_args()
 
+    ##Method handles options for requests
     def options(self):
         return None
 
+    ##Method returns a list of TAGS_LIMIT most used tags.
     def get(self):
         """
         Returns a list of TAGS_LIMIT most used tags in the following convention:
