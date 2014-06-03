@@ -3,9 +3,11 @@ from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 from sqlalchemy.exc import SQLAlchemyError
 
+from functools import reduce
+
 from . import lm, app
 from .models import Comment, Recipe
-from .util import Flavority
+from .util import Flavority, ViewPager
 
 
 class Comments(Resource):
@@ -24,9 +26,20 @@ class Comments(Resource):
 
     @staticmethod
     def parse_get_arguments():
+        def cast_bool(x):
+            if x.lower() == '': return True
+            elif x.lower() == 'false': return False
+            elif x.lower() == 'true': return True
+            try:
+                return bool(x)
+            except ValueError:
+                return False
+
         parser = reqparse.RequestParser()
+        parser.add_argument('about_me', type=cast_bool, default=False)
+        parser.add_argument('my_comments', type=cast_bool, default=False)
         parser.add_argument('recipe_id', type=int, default=None)
-        parser.add_argument('page', type=int, default=0)
+        parser.add_argument('page', type=int, default=1)
         parser.add_argument('limit', type=int, default=10)
         return parser.parse_args()
 
@@ -53,6 +66,15 @@ class Comments(Resource):
             return Comment.query.filter(Comment.id == comment_id, Comment.author_id == author_id, Comment.recipe_id == recipe_id).one()
         except:
             abort(404, message="Comment with id: {} does not exist!".format(comment_id))
+
+    # get all comments about user's recipes
+    @staticmethod
+    def get_user_recipes_comments(user):
+        try:
+            return reduce( lambda q1, q2: q1.union(q2), [ recipe.comments for recipe in user.recipes] )
+        except BaseException as e:
+            app.logger.error(e)
+            abort(404, message="Author with id: {} has no comments!".format(user.id))
 
     @staticmethod
     def parse_post_arguments():
@@ -104,15 +126,25 @@ class Comments(Resource):
     def get(self):
         args = self.parse_get_arguments()
 
-        query1, query2 = Comment.query, Comment.query
+        query = Comment.query
+        user = lm.get_current_user()
+        
+        if args['about_me'] and user is not None:
+            query = self.get_user_recipes_comments(user)
+
         if args['recipe_id'] is not None:
-            query1, query2 = Recipe.query.get(args['recipe_id']).comments, Recipe.query.get(args['recipe_id']).comments
-        query1 = query1.order_by(Comment.date.desc())
-        query1 = query1.slice(args['page']*args['limit'], (1+args['page'])*args['limit'])
+            query = query.filter(Comment.recipe_id == args['recipe_id'])
+
+        if args['my_comments'] and user is not None:
+            query = query.filter(Comment.author_id == user.id)
+            
+        query = query.order_by(Comment.date.desc())
+        totalElements = query.count()
+        query = ViewPager(query, args['page'], args['limit'])
 
         return {
-            'comments': [c.to_json() for c in query1.all()],
-            'all': query2.count()
+            'comments': [c.to_json() for c in query.all()],
+            'totalElements': totalElements,
         }
 
 #    @lm.auth_required

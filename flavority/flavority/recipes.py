@@ -46,6 +46,7 @@ class Recipes(Resource):
         parser.add_argument('query', type=str)
         parser.add_argument('tag_id', type=int, default=None, action='append')
         parser.add_argument('advanced', type=cast_bool, default=False)
+        parser.add_argument('myrecipes', type=cast_bool, default=False)
         return parser.parse_args()
 
     def options(self):
@@ -75,7 +76,10 @@ class Recipes(Resource):
         # only recipes from given user
         if args['user_id']:
             query = query.filter(Recipe.author_id == args['user_id'])
-
+        elif args['myrecipes']:
+            user = lm.get_current_user()
+            query = user.recipes
+        
         # search string in titles
         if args['query'] is not None:
             pattern = args['query'].lower()
@@ -251,3 +255,4 @@ class RecipesWithId(Resource):
     #             abort(404, message="No recipes with given ingredients!")
     #     else:
     #         return -1       #ERROR!!
+    

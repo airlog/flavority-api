@@ -13,7 +13,8 @@ app.restapi.add_resource(Signup, "/auth/signup")
 app.restapi.add_resource(Signin, "/auth/signin")
 
 app.restapi.add_resource(Recipes, "/recipes/")
-app.restapi.add_resource(RecipesWithId, "/recipes/<int:recipe_id>")
+app.restapi.add_resource(RecipesWithId,"/recipes/<int:recipe_id>")
+
 
 app.restapi.add_resource(Comments, '/comments/')
 app.restapi.add_resource(TagsResource, '/tags/')
@@ -23,5 +24,5 @@ app.restapi.add_resource(PhotoResource,
                          '/photos/',
                          '/photos/<int:photo_id>/')
                          
-app.restapi.add_resource(UserById, "/users/<int:user_id>")
+app.restapi.add_resource(UserById, "/users", "/users/<int:user_id>")
 
