@@ -40,6 +40,7 @@ class Recipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         parser.add_argument('user_id', type=int, default=None)
         parser.add_argument('query', type=str)
+        parser.add_argument('advanced', type=str, default=None)
         return parser.parse_args()
 
     def options(self):
@@ -49,6 +50,12 @@ class Recipes(Resource):
         args = self.parse_get_arguments()
 
         query = Recipe.query
+
+        if args['advanced']:
+#          funkcja do napisania dla Patryka
+#           w query znajduje sie lista skladnikow
+           return #advancedSearch(args['query'], args['page'], args['limit'])
+
         # only recipes from given user
         if args['user_id']:
             query = query.filter(Recipe.author_id == args['user_id'])
@@ -62,7 +69,7 @@ class Recipes(Resource):
         query = {
             'id': lambda x: x,
             'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
-            'rate': lambda x: x.order_by(Recipe.rank.desc())
+            'rate': lambda x: x.order_by(Recipe.taste_comments.desc())
         }[args['sort_by']](query)
         total_elements = query.count()
         query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
