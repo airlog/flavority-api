@@ -36,10 +36,10 @@ class Comments(Resource):
                 return False
 
         parser = reqparse.RequestParser()
-        parser.add_argument('another_comments', type=cast_bool, default=False)
+        parser.add_argument('about_me', type=cast_bool, default=False)
         parser.add_argument('my_comments', type=cast_bool, default=False)
         parser.add_argument('recipe_id', type=int, default=None)
-        parser.add_argument('page', type=int, default=0)
+        parser.add_argument('page', type=int, default=1)
         parser.add_argument('limit', type=int, default=10)
         return parser.parse_args()
 
@@ -126,28 +126,25 @@ class Comments(Resource):
     def get(self):
         args = self.parse_get_arguments()
 
-        query1, query2 = Comment.query, Comment.query
-        query1 = query1.order_by(Comment.date.desc())
+        query = Comment.query
+        user = lm.get_current_user()
         
+        if args['about_me'] and user is not None:
+            query = self.get_user_recipes_comments(user)
+
         if args['recipe_id'] is not None:
-            query1, query2 = Recipe.query.get(args['recipe_id']).comments, Recipe.query.get(args['recipe_id']).comments
-            query1 = ViewPager(query1, args['page'], args['limit'])
+            query = query.filter(Comment.recipe_id == args['recipe_id'])
 
-        if args['another_comments']:
-            print('another_comments')
-            user = lm.get_current_user()
-            query1, query2 = self.get_user_recipes_comments(user), self.get_user_recipes_comments(user)  
-            query1 = ViewPager(query1, args['page'], args['limit'])
-
-        if args['my_comments']:
-            print('my_comments')
-            user = lm.get_current_user()
-            query1, query2 = self.get_author_comments(user.id), self.get_author_comments(user.id)  
-            query1 = ViewPager(query1, args['page'], args['limit'])
+        if args['my_comments'] and user is not None:
+            query = query.filter(Comment.author_id == user.id)
+            
+        query = query.order_by(Comment.date.desc())
+        totalElements = query.count()
+        query = ViewPager(query, args['page'], args['limit'])
 
         return {
-            'comments': [c.to_json() for c in query1.all()],
-            'totalElements': query2.count()
+            'comments': [c.to_json() for c in query.all()],
+            'totalElements': totalElements,
         }
 
 #    @lm.auth_required
