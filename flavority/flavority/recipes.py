@@ -46,6 +46,7 @@ class Recipes(Resource):
         parser.add_argument('query', type=str)
         parser.add_argument('tag_id', type=int, default=None, action='append')
         parser.add_argument('advanced', type=cast_bool, default=False)
+        parser.add_argument('myrecipes', type=cast_bool, default=False)
         return parser.parse_args()
 
     def options(self):
@@ -75,7 +76,10 @@ class Recipes(Resource):
         # only recipes from given user
         if args['user_id']:
             query = query.filter(Recipe.author_id == args['user_id'])
-
+        elif args['myrecipes']:
+            user = lm.get_current_user()
+            query = user.recipes
+        
         # search string in titles
         if args['query'] is not None:
             pattern = args['query'].lower()
@@ -252,52 +256,3 @@ class RecipesWithId(Resource):
     #     else:
     #         return -1       #ERROR!!
     
-
-class MyRecipes(Resource):
-
-    GET_ITEMS_PER_PAGE = 10
-
-    @staticmethod
-    def parse_get_arguments():
-        def cast_bool(x):
-            if x.lower() == '': return True
-            elif x.lower() == 'false': return False
-            elif x.lower() == 'true': return True
-            try:
-                return bool(x)
-            except ValueError:
-                return False
-
-        def cast_natural(x):
-            try: i = int(x)
-            except ValueError: return 1
-            return i if i >= 1 else 1
-
-        parser = reqparse.RequestParser()
-        parser.add_argument('short', type=cast_bool)
-        parser.add_argument('page', type=cast_natural, default=1)
-        parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
-        parser.add_argument('user_id', type=int, default=None)
-        return parser.parse_args()
-
-    def options(self):
-        return None
-
-    def get(self):
-        print("myrecipes")
-        args = self.parse_get_arguments()
-        user = lm.get_current_user()
-        
-        total_elements = user.recipes.count()
-        recipes = ViewPager(user.recipes, args['page'], args['limit'])
-
-        # return short or standard form as requested
-        func = lambda x: x.to_json()
-        if args['short']:
-            func = lambda x: x.to_json_short(get_photo=lambda photo: photo.id)
-
-        return {
-            'recipes': list(map(func, recipes.all())),
-            'totalElements': total_elements,
-        }
-        
