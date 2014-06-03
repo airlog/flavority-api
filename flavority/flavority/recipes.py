@@ -1,12 +1,16 @@
 
 import traceback
+from functools import reduce
+from os.path import abspath, join
 
+from flask import request
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
 
 from . import lm, app
 from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation, User
 from .util import Flavority, ViewPager
+from .photos import PhotoResource
 
 
 class Recipes(Resource):
@@ -40,7 +44,9 @@ class Recipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
         parser.add_argument('user_id', type=int, default=None)
         parser.add_argument('query', type=str)
-        parser.add_argument('advanced', type=str, default=None)
+        parser.add_argument('tag_id', type=int, default=None, action='append')
+        parser.add_argument('advanced', type=cast_bool, default=False)
+        parser.add_argument('myrecipes', type=cast_bool, default=False)
         return parser.parse_args()
 
     def options(self):
@@ -56,10 +62,24 @@ class Recipes(Resource):
 #           w query znajduje sie lista skladnikow
            return #advancedSearch(args['query'], args['page'], args['limit'])
 
+        # only recipes containg at least one of the requested tags
+        #   this piece of code may require an explanation:
+        #       the idea is to take all recipes marked with a given tag (one) and union results
+        #       in order to avoid None objects they're filtered out
+        if args.tag_id is not None:
+            query = reduce(
+                lambda q1, q2: q1.union(q2),
+                map(
+                    lambda tag: tag.recipes,
+                    filter(lambda x: x is not None, [Tag.query.get(i) for i in args.tag_id])))
+
         # only recipes from given user
         if args['user_id']:
             query = query.filter(Recipe.author_id == args['user_id'])
-
+        elif args['myrecipes']:
+            user = lm.get_current_user()
+            query = user.recipes
+        
         # search string in titles
         if args['query'] is not None:
             pattern = args['query'].lower()
@@ -76,7 +96,8 @@ class Recipes(Resource):
 
         # return short or standard form as requested
         func = lambda x: x.to_json()
-        if args['short']: func = lambda x: x.to_json_short(get_photo=lambda photo: photo.mini_data.decode())
+        if args['short']:
+            func = lambda x: x.to_json_short(get_photo=lambda photo: photo.id)
 
         return {
             'recipes': list(map(func, query.all())),
@@ -186,8 +207,7 @@ class RecipesWithId(Resource):
 
         return Flavority.success()
 
-
-    def options(self):
+    def options(self, recipe_id=None):
         return None
 
     @staticmethod
@@ -235,3 +255,4 @@ class RecipesWithId(Resource):
     #             abort(404, message="No recipes with given ingredients!")
     #     else:
     #         return -1       #ERROR!!
+    

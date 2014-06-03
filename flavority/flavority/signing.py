@@ -76,5 +76,6 @@ class Signin(Resource):
             "result": "success",
             "token": lm.generate_token(user).decode(),
             'duration': lm.TOKEN_DURATION,
+            'user': user.email,
         }
 

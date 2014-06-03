@@ -212,7 +212,7 @@ class Recipe(db.Model):
 
     author = db.relationship('User', backref=db.backref('recipes', lazy='dynamic'))
     ingredients = db.relationship('IngredientAssociation', cascade='all, delete-orphan')
-    tags = db.relationship('Tag', secondary=tag_assignment)
+    tags = db.relationship('Tag', secondary=tag_assignment, backref=db.backref('recipes', lazy='dynamic'))
 
     def __init__(self, dish_name, preparation_time, recipe_text, portions, difficulty, author_id, creation_date=None):
         self.dish_name = dish_name
@@ -305,6 +305,7 @@ class Comment(db.Model):
     def to_json(self):
         extra_content = {}
         extra_content.update({'author_name': self.author.email})                
+        extra_content.update({'recipe_name': self.recipe.dish_name})                
         return to_json_dict(self, self.__class__, extra_content)
     
 #End of 'Comment' class declaration
