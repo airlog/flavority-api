@@ -162,6 +162,7 @@ class User(db.Model, UserMixin):
             self.last_seen_date = self.register_date
 
     def to_json(self):
+        photo = Photo.query.filter(Photo.avatar_user_id == self.id).first();
         return {
             "id": self.id,
             "email": self.email,
@@ -169,7 +170,8 @@ class User(db.Model, UserMixin):
             "last_seen_date": self.last_seen_date.isoformat(),
             "recipes": self.recipes.count(),
             "comments": self.comments.count(),
-            "average_rate": self.count_average_rate()
+            "average_rate": self.count_average_rate(),
+            "avatar": photo.id if photo is not None else ""
         }
 
     def get_id(self):
@@ -419,11 +421,13 @@ class Photo(db.Model):
     __tablename__ = 'Photo'
 
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'))
+    avatar_user_id = db.Column(db.Integer, db.ForeignKey('User.id'))
     full_data = db.Column(db.LargeBinary, nullable=False)
     mini_data = db.Column(db.LargeBinary, nullable=True)
 
     recipe = db.relationship('Recipe', backref=db.backref('photos', lazy='dynamic'))
+    avatar_user = db.relationship("User")
 
     @staticmethod
     def supported_formats():
