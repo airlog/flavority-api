@@ -147,7 +147,7 @@ class Comments(Resource):
             'totalElements': totalElements,
         }
 
-#    @lm.auth_required
+    @lm.auth_required
     def post(self):
         args = self.parse_post_arguments()
         user, recipe = lm.get_current_user(), Recipe.query.get(args.recipe)
@@ -156,12 +156,6 @@ class Comments(Resource):
                 'message': 'no such recipe with id {}'.format(args.recipe_id),
                 'status': 404,
             }, 404
-
-        # when @lm.auth_required is active this is needless
-        if user is None:
-            from flavority.models import User
-            user = User.query.first()
-            app.logger.debug('No user has been detected! For debug purposes using user: {}'.format(user))
 
         # creating new comment
         comment = Comment(args.text, args.taste, args.difficulty, user.get_id(), recipe.id)

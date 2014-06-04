@@ -377,6 +377,12 @@ class Unit(db.Model):
     
     def __repr__(self):
         return '<Unit : %r, with value : %r>' % (self.unit_name, self.unit_value)
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.unit_name,
+        }
 #End of 'Unit' class declaration
 
 
@@ -421,7 +427,7 @@ class Photo(db.Model):
     __tablename__ = 'Photo'
 
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'))
+    recipe_id = db.Column(db.Integer, db.ForeignKey('Recipe.id'), nullable=True)
     avatar_user_id = db.Column(db.Integer, db.ForeignKey('User.id'))
     full_data = db.Column(db.LargeBinary, nullable=False)
     mini_data = db.Column(db.LargeBinary, nullable=True)
@@ -432,4 +438,4 @@ class Photo(db.Model):
     @staticmethod
     def supported_formats():
         return Photo.FORMAT_ENUM
-        
+
