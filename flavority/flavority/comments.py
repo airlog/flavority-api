@@ -11,9 +11,19 @@ from .util import Flavority, ViewPager
 
 
 class Comments(Resource):
-
+	"""Class that contains comment's methods such as:
+		get, post, delete, put and many more needed in connection with website.
+	"""
     @staticmethod
     def get_form_parser():
+		"""Returns fields given in parser needed to create comment:
+			*id - user id,
+			*author_id - comment's author id,
+			*recipe_id - id of commented recipe,
+			*text - comment's body,
+			*difficulty - voted recipe's difficulty,
+			*taste - voted recipe's taste
+		"""
         parser = reqparse.RequestParser()
         parser.add_argument('id', type=int, requred=True, help="comment id")
         parser.add_argument('author_id', type=int, required=True, help="comment author id")
@@ -26,7 +36,13 @@ class Comments(Resource):
 
     @staticmethod
     def parse_get_arguments():
+		"""It's task is to parse arguments send via GET request
+		"""
         def cast_bool(x):
+		"""Written to cast parameter to bool
+			*'false' will be casted to False
+			*'true' and '' will be casted to True
+		"""
             if x.lower() == '': return True
             elif x.lower() == 'false': return False
             elif x.lower() == 'true': return True
@@ -43,33 +59,44 @@ class Comments(Resource):
         parser.add_argument('limit', type=int, default=10)
         return parser.parse_args()
 
-    #Implemented to get all User's comments
     @staticmethod
     def get_author_comments(author_id):
+		"""Implemented to get all User's comments
+			*author_id - id of user which comments should be returned
+			Returns 404 error if there are no comments posted by author
+		"""
         try:
             return Comment.query.filter(Comment.author_id == author_id)
         except:
             abort(404, message="Author with id: {} has no comments!".format(author_id))
 
-    #Implemented to get all Recipe's comments
     @staticmethod
     def get_recipe_comments(recipe_id):
+		"""Implemented to get all Recipe's comments
+			*recipe_id - id of recipe which comments should be returned
+			Returns 404 error if there are no comments for recipe 
+		"""
         try:
             return Comment.query.filter(Comment.recipe_id == recipe_id)
         except:
             abort(404, message="Recipe with id: {} has no comments yet!".format(recipe_id))
 
-    #Implemented to get specific comment with given comment_id, author_id and recipe_id
     @staticmethod
     def get_comment(comment_id, author_id, recipe_id):
+		"""Implemented to get specific comment with given comment_id, author_id and recipe_id
+			Returns 404 error if there is no comment with given id.
+		"""
         try:
             return Comment.query.filter(Comment.id == comment_id, Comment.author_id == author_id, Comment.recipe_id == recipe_id).one()
         except:
             abort(404, message="Comment with id: {} does not exist!".format(comment_id))
 
-    # get all comments about user's recipes
-    @staticmethod
+	@staticmethod
     def get_user_recipes_comments(user):
+		"""Implemented to return all comments about user's recipes
+			*user - user object
+			Returns 404 error if there are no comments to return
+		"""
         try:
             return reduce( lambda q1, q2: q1.union(q2), [ recipe.comments for recipe in user.recipes] )
         except BaseException as e:
@@ -78,7 +105,13 @@ class Comments(Resource):
 
     @staticmethod
     def parse_post_arguments():
+		"""Written to parse POST request arguments
+		"""
         def mark(x):
+			"""Handles assessments for recipes:
+				* returns 0.5 - 5.0 if this was one of values passed
+				* returns error if values weren't in set from 0.5 to 5.0
+			"""
             f = float(x)
             if f in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
                 return f
@@ -96,13 +129,16 @@ class Comments(Resource):
         return parser.parse_args()
 
     def options(self):
+		"""Handles options for requests
+		"""
         return None
 
-    #Method handles comment deletion
     @lm.auth_required
     def delete(self, comment_id, author_id, recipe_id):
-        comment_to_delete = self.get_comment(comment_id, author_id, recipe_id) #If someone's user_id is different from author's id then \
-                # comment shouldn't be found because comment_id was given
+		"""Method handles comment deletion
+			Returns success or failure depends on action state
+		"""
+        comment_to_delete = self.get_comment(comment_id, author_id, recipe_id) 
         try:
             app.db.session.delete(comment_to_delete)
             app.db.session.commit()
@@ -113,8 +149,11 @@ class Comments(Resource):
 
     #Method handles comment edition
     @lm.auth_required
-    def put(self, comment_id, new_text):   #zakladam, ze nie mozna zmienic oceny tylko sam tekst komentarza!!
-        comment = self.get_comment(comment_id)      #same note as in $delete$ method -> will search for proper comment (only author can edit)
+    def put(self, comment_id, new_text):
+		"""Method handles comment edition, user cannot change previously given assessments
+			Returns success or failure depends on action state
+		"""
+        comment = self.get_comment(comment_id)      
         comment.text = new_text
         try:
             app.db.session.commit()
@@ -124,6 +163,8 @@ class Comments(Resource):
         return Flavority.success()
 
     def get(self):
+		"""Handles GET request
+		"""
         args = self.parse_get_arguments()
 
         query = Comment.query
@@ -149,6 +190,8 @@ class Comments(Resource):
 
 #    @lm.auth_required
     def post(self):
+		"""Handles POST request
+		"""
         args = self.parse_post_arguments()
         user, recipe = lm.get_current_user(), Recipe.query.get(args.recipe)
         if recipe is None:

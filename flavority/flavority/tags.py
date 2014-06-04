@@ -8,12 +8,17 @@ from .util import ViewPager
 
 
 class TagsResource(Resource):
-
+	"""Tag model class
+	"""
     GET_ITEMS_PER_PAGE = 30
 
     @staticmethod
     def parse_get_arguments():
+		"""It's task is to parse arguments for GET request
+		"""
         def cast_natural(x):
+			"""Should parse given argument to INT number
+			"""
             try: i = int(x)
             except ValueError: return 1
             return i if i >= 1 else 1
@@ -24,11 +29,12 @@ class TagsResource(Resource):
         return parser.parse_args()
 
     def options(self):
+		"""Handles options for requests
+		"""
         return None
 
     def get(self):
-        """
-        Returns a list of TAGS_LIMIT most used tags in the following convention:
+        """Returns a list of TAGS_LIMIT most used tags in the following convention:
             ...
             [
                 {

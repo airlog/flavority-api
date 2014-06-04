@@ -12,11 +12,9 @@ from flavority.auth.mixins import UserMixin
 
 db = app.db
 
-#Associations aka Logic tables (many-to-many connections)
-#DEL -> te takie inne niebieskie tabelki w uml'u, dla mnie to one sa niebieskie ale pewnie jakos inaczej ten kolor sie zwie, whatever
-#Table will connect Ingredients with Recipes
 class IngredientAssociation(db.Model):
-
+	"""Many-to-many table that will connect ingredients with recipes
+	"""
     __tablename__ = 'IngredientAssociation'
     
     id = db.Column(db.Integer, primary_key = True)
@@ -27,12 +25,15 @@ class IngredientAssociation(db.Model):
     ingredient_unit = db.relationship('IngredientUnit')
 
     def __init__(self, ingredient_unit, amount):
+		"""Constructor with ingredient's unit and amount on that unit
+		"""
         self.ingredient_unit = ingredient_unit
         self.amount = amount    
 
 
 class IngredientUnit(db.Model):
-
+	"""Many-to-many table that will connect ingredients with units
+	"""
     __tablename__ = 'IngredientUnit'
 
     id = db.Column(db.Integer, primary_key = True)
@@ -43,6 +44,8 @@ class IngredientUnit(db.Model):
     unit = db.relationship('Unit')
 
     def __init__(self, ingredient, unit):
+		"""Constructor with ingredient and it's amount
+		"""
         self.ingredient = ingredient
         self.unit = unit    
 
@@ -56,15 +59,14 @@ favour_recipes = db.Table('favour_recipes',
 #End of associations declaration
 
 def serialize_date(dt):
-
+	"""Written to serialise date in to JSON format
+	"""
     return dt.isoformat()
 
 def to_json_dict(inst, cls, extra_content={}):
-    """
-    Jsonify the sql alchemy query result.
-
-    in extra_content you can put any stuff you want to have in your json
-    e.g. sth that is not a column
+    """Jsonify the sql alchemy query result.
+		in extra_content you can put any stuff you want to have in your json
+		e.g. sth that is not a column
     """
     convert = dict()
     convert[db.Date] = lambda dt: dt.isoformat()
@@ -91,7 +93,8 @@ def to_json_dict(inst, cls, extra_content={}):
 
 
 class User(db.Model, UserMixin):
-
+	"""Owns user information columns, variables, methods
+	"""
     # should be sufficient
     EMAIL_LENGTH    = 128
     
@@ -133,21 +136,31 @@ class User(db.Model, UserMixin):
 
     @staticmethod
     def gen_salt(length = HASH_SIZE):
+		"""Returns generated salt for password
+		"""		
         return urandom(length)
         
     @staticmethod
     def combine(salt, pwd):
+		"""Combines salt with password
+		"""
         return salt + pwd
 
     @staticmethod
     def hash_pwd(bytes):
+		"""Hashes password
+		"""
         return sha256(bytes).hexdigest()
 
     @staticmethod
     def is_valid_email(text):
+		"""Checks if given email address is valid or not
+		"""
         return User.EMAIL_REGEX.match(text) is not None
        
     def __init__(self, email, password, type = None, register_date = None, last_seen_date = None):
+		"""Contructor with values
+		"""
         # validate arguments
         if not User.is_valid_email(email): raise ValueError()
         
@@ -162,6 +175,8 @@ class User(db.Model, UserMixin):
             self.last_seen_date = self.register_date
 
     def to_json(self):
+		"""Returns user object in JSON format
+		"""
         return {
             "id": self.id,
             "email": self.email,
@@ -173,9 +188,13 @@ class User(db.Model, UserMixin):
         }
 
     def get_id(self):
+		"""Returns id
+		"""
         return self.id
 
     def count_average_rate(self):
+		"""Returns average rate of user's taste comments
+		"""
         sum_rate = 0
         sum_count = 0
         for recipe in self.recipes:
@@ -194,7 +213,8 @@ class User(db.Model, UserMixin):
 #Class represents the recipe's object with name 'Recipe'
 #Arg: db.Model - model from SQLAlchemy database
 class Recipe(db.Model):
-    
+    """Recipe methods, columns, variables model
+	"""
     DESCRIPTION_LENGTH = 120
     
     __tablename__ = 'Recipe'
@@ -215,6 +235,8 @@ class Recipe(db.Model):
     tags = db.relationship('Tag', secondary=tag_assignment, backref=db.backref('recipes', lazy='dynamic'))
 
     def __init__(self, dish_name, preparation_time, recipe_text, portions, difficulty, author_id, creation_date=None):
+		"""Constructor
+		"""
         self.dish_name = dish_name
         if creation_date is None:
             self.creation_date = datetime.now()
@@ -230,6 +252,8 @@ class Recipe(db.Model):
         return '<Recipe name : %r, posted by : %r>' % (self.dish_name, self.author_id)
 
     def to_json_short(self, get_photo=None):
+		"""Method returns recipe in JSON short format
+		"""
         if get_photo is None: get_photo = lambda x: x.id
         return {
             "id": self.id,
@@ -241,6 +265,8 @@ class Recipe(db.Model):
         }
 
     def to_json(self):
+		"""Method returns recipe in JSON format
+		"""
         extra_content = {}
         tags = {} if self.tags is None else {'tags': [i.json for i in self.tags]}
         extra_content.update(tags)
@@ -252,6 +278,8 @@ class Recipe(db.Model):
 
     
     def count_taste(self):
+		"""Method returns recipe's average taste rate
+		"""
         sum = 0
         for comment in self.comments:
             sum += comment.taste
@@ -261,6 +289,8 @@ class Recipe(db.Model):
             self.taste_comments = sum/self.comments.count()
 
     def count_difficulty(self):
+		"""Method returns recipe's average difficulty rate
+		"""
         sum = 0
         for comment in self.comments:
             sum += comment.difficulty
@@ -275,7 +305,8 @@ class Recipe(db.Model):
 #Class represents the Comment's object with name 'Comment'
 #Arg: db.Model - model from SQLAlchemy database
 class Comment(db.Model):
-    
+    """Comment methods, columns, variables model
+	"""
     COMMENT_TITLE_LENGTH = 120
     
     __tablename__ = 'Comment'
@@ -291,6 +322,8 @@ class Comment(db.Model):
     recipe = db.relationship('Recipe', backref=db.backref('comments', lazy='dynamic'))       #DElmany to one z comment do recipe
     
     def __init__(self, text, taste, difficulty, author_id, recipe_id, date=None):
+		"""Constructor
+		"""
         self.text = text
         self.taste = taste
         self.difficulty = difficulty
@@ -303,6 +336,8 @@ class Comment(db.Model):
         return '<Commented by: %r,to recipe: %r, with text: %r>' % (self.author_id, self.recipe_id , self.text)
     
     def to_json(self):
+		"""Returns comment in JSON format
+		"""
         extra_content = {}
         extra_content.update({'author_name': self.author.email})                
         extra_content.update({'recipe_name': self.recipe.dish_name})                
@@ -314,6 +349,8 @@ class Comment(db.Model):
 #Class represents the Rate object with name 'Rate'
 #Arg: db.Model - model from SQLAlchemy database
 class Rate(db.Model):
+	"""Rate methods, columns, variables model
+	"""
     __tablename__ = 'Rate'
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey('User.id'))
@@ -324,6 +361,8 @@ class Rate(db.Model):
     difficulty_rate = db.Column(db.SmallInteger)
     
     def __init__(self, taste, difficulty, author, recipe):
+		"""Constructor
+		"""
         self.taste_rate = taste
         self.difficulty_rate = difficulty
         self.author = author
@@ -337,7 +376,8 @@ class Rate(db.Model):
 #Class represents the Ingredient's object with name 'Ingredient'
 #Arg: db.Model - model from SQLAlchemy database
 class Ingredient(db.Model):
-    
+    """Ingredient methods, columns, variables model
+	"""
     INGREDIENT_NAME_LENGTH = 100
     
     __tablename__ = 'Ingredient'
@@ -347,6 +387,8 @@ class Ingredient(db.Model):
 #    unit = db.relationship('Unit', backref=db.backref('units', lazy='dynamic'))
         
     def __init__(self, name):
+		"""Constructor
+		"""
         self.name = name
     
     def __repr__(self):
@@ -358,17 +400,20 @@ class Ingredient(db.Model):
 #Class represents the Unit's object with name 'Unit'
 #Arg: db.Model - model from SQLAlchemy database
 class Unit(db.Model):
-    
+    """UNit methods, columns, variables model
+	"""
     UNIT_NAME_LENGTH = 40
     
     __tablename__ = 'Unit'
     id = db.Column(db.Integer, primary_key=True)
-    unit_name = db.Column(db.String(UNIT_NAME_LENGTH), unique=True) #DELtak mi sie wydaje :P
+    unit_name = db.Column(db.String(UNIT_NAME_LENGTH), unique=True)
     unit_value = db.Column(db.Float)
-    other_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))      #DELnie do konca zalapalem czemu, ale to musi tu zostac
-    others = db.relationship('Unit', remote_side=[id])              #DELwedle wszelkich znakow w internetach ta relacja many to one powinna chodzic
-    #DELsee -> Adjacency List Relationships at SQLAlchemy
+    other_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))
+    others = db.relationship('Unit', remote_side=[id])
+	
     def __init__(self, unit_name, unit_value, others):
+		"""Constructor
+		"""
         self.unit_name = unit_name
         self.unit_value = unit_value
         self.others = others
@@ -377,6 +422,8 @@ class Unit(db.Model):
         return '<Unit : %r, with value : %r>' % (self.unit_name, self.unit_value)
 
     def to_json(self):
+		"""Returns Unit in JSON format
+		"""
         return {
             'id': self.id,
             'name': self.unit_name,
@@ -387,7 +434,8 @@ class Unit(db.Model):
 #Class represents the Tag's object with name 'Tag'
 #Arg: db.Model - model from SQLAlchemy database
 class Tag(db.Model):
-    
+    """Tag methods, columns, variables model
+	"""
     TAG_NAME_LENGTH = 40
     TAG_TYPE_LENGTH = 39
     
@@ -397,6 +445,8 @@ class Tag(db.Model):
     type = db.Column(db.String(TAG_TYPE_LENGTH))    # FIXME: what's this?
     
     def __init__(self, name, type=None):
+		"""Constructor
+		"""
         self.name = name
         self.type = type
     
@@ -405,18 +455,17 @@ class Tag(db.Model):
 
     @property
     def json(self):
+		"""Returns tag in JSON format
+		"""
         return to_json_dict(self, self.__class__)
 #End of 'Tag' class declaration
-#EOF
 
 
 class Photo(db.Model):
-    '''
-    This class is a model for table containg photos used by recipes.
-
-    Each recipe can have many photos, but any photo can only have one recipe. Photos should be stored as Base64 encoded
-    strings with a proper format column set.
-    '''
+    """This class is a model for table containg photos used by recipes.
+		Each recipe can have many photos, but any photo can only have one recipe. Photos should be stored as Base64 encoded
+		strings with a proper format column set.
+    """
 
     DATA_ENCODED_LENGTH = 1 * 1024 * 1024   # 1 MB
 
@@ -433,5 +482,7 @@ class Photo(db.Model):
 
     @staticmethod
     def supported_formats():
+		"""returns photo's supported formats
+		"""
         return Photo.FORMAT_ENUM
 

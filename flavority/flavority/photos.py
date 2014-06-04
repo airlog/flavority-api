@@ -14,8 +14,7 @@ from .models import Photo, Recipe
 
 class PhotoResource(Resource):
 
-    """
-    This class handles request for images.
+    """This class handles request for images.
     """
 
     KEY_FULL_SIZE = 'full-size'
@@ -23,10 +22,14 @@ class PhotoResource(Resource):
 
     @staticmethod
     def convert_image(image, format=Photo.FORMAT):
+		"""Converts images
+		"""
         return image.convert(format)
 
     @staticmethod
     def encode_image(image_binary, mini_size=(300, 300)):
+		"""Encodes images
+		"""
         assert isinstance(image_binary, bytes)
 
         with Image(blob=image_binary) as image:
@@ -43,6 +46,8 @@ class PhotoResource(Resource):
 
     @staticmethod
     def parse_get_arguments():
+		"""Written to parse arguments connected with GET request
+		"""
         def cast_mini(x):
             if x.lower() == '': return True
             elif x.lower() == 'false': return False
@@ -58,6 +63,8 @@ class PhotoResource(Resource):
 
     @staticmethod
     def parse_post_arguments():
+		"""Written to parse arguments connected with POST request
+		"""
         parser = reqparse.RequestParser()
         parser.add_argument('file', required=True, location='files')
         parser.add_argument('recipe_id', type=int)
@@ -67,13 +74,10 @@ class PhotoResource(Resource):
         return None
 
     def get(self, photo_id=None):
-        """
-        Returns a Base64 encoded JPEG image with supplied id from database.
-
-        If such an row doesn't exists or supplied id is `None` than HTTP404 will be
-        returned.
-
-        If request has a `mini` GET parameter then it will return image's miniature.
+        """Returns a Base64 encoded JPEG image with supplied id from database.
+			If such an row doesn't exists or supplied id is `None` than HTTP404 will be
+			returned.
+			If request has a `mini` GET parameter then it will return image's miniature.
         """
 
         if photo_id is None:
@@ -92,17 +96,15 @@ class PhotoResource(Resource):
         return send_file(file, mimetype='image/jpeg')
 
     def post(self, photo_id=None):
-        """
-        Inserts new image to the database.
+        """ Inserts new image to the database.
+				This method expects two additional arguments:
+				+ `file` - an image file transmitted with a request
+				+ `recipe_id` - id of a recipe which owns the image
+				Method returns a dictionary with a id of just created row.
 
-        This method expects two additional arguments:
-        + `file` - an image file transmitted with a request
-        + `recipe_id` - id of a recipe which owns the image
-        Method returns a dictionary with a id of just created row.
-
-        This method can be used only when no `photo_id` is specified. In other case
-        HTTP405 is returned. It may also return HTTP500 when adding to the database
-        fails.
+				This method can be used only when no `photo_id` is specified. In other case
+				HTTP405 is returned. It may also return HTTP500 when adding to the database
+				fails.
         """
 
         if photo_id is not None:
