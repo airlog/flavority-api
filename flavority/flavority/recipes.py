@@ -305,4 +305,46 @@ class RecipesWithId(Resource):
         return Flavority.success()
 
 
+def RecipesAdvancedSearch(Resource)
+
+    def get(self):
+        args = Recipes.parse_get_arguments()
+        
+        query = Recipe.query    # czy to naprawdę tutaj potrzebne?
+        tempq = None
+        best = None             # słownik najlepiej dopasowanych przepisów
+        
+        # find all recipes containing at least one demanded ingredient, count all repeats and filter best fitted
+        if args['query'] is not None:
+            query = map(
+                lambda ingr: ingr.recipes,
+                filter(lambda x: x is not None, [Ingredient.query.get(i) for i in args['query']]))
+            tempq = reduce(lambda q1, q2: q1.union(q2), query)
+            best = {i : 0 for i in tempq}
+
+            for i in query:
+                map(lambda rec: best[rec] += 1, i)
+    
+            query = filter(lambda rec: best[rec] >= max(best.values())-1, tempq)
+        
+        # select proper sorting key
+        query = {
+            'id': lambda x: x,
+            'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
+            'rate': lambda x: x.order_by(Recipe.taste_comments.desc())
+        }[args['sort_by']](query)
+        total_elements = query.count()
+        query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
+        
+        # return short or standard form as requested
+        func = lambda x: x.to_json()
+        if args['short']:
+            func = lambda x: x.to_json_short(get_photo=lambda photo: photo.id)
+        
+        return {
+            'recipes': list(map(func, query.all())),
+            'totalElements': total_elements,
+        }
+
+
 __all__ = ['Recipes', 'RecipesWithId']
