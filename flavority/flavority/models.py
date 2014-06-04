@@ -247,6 +247,7 @@ class Recipe(db.Model):
         ingredients = {} if self.ingredients is None else \
             {'ingredients': [{"unit_name":i.ingredient_unit.unit.unit_name,"ingr_name": i.ingredient_unit.ingredient.name, "amount": i.amount} for i in self.ingredients]}
         extra_content.update(ingredients)
+        extra_content.update({"photos": list(map(lambda x: x.id, self.photos))})
         extra_content.update({'author_name': self.author.email})                
         return to_json_dict(self, self.__class__, extra_content)
 
