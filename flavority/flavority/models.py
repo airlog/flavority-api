@@ -305,6 +305,7 @@ class Comment(db.Model):
     def to_json(self):
         extra_content = {}
         extra_content.update({'author_name': self.author.email})                
+        extra_content.update({'recipe_name': self.recipe.dish_name})                
         return to_json_dict(self, self.__class__, extra_content)
     
 #End of 'Comment' class declaration
