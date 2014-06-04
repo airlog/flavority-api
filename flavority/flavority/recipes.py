@@ -17,12 +17,17 @@ from .photos import PhotoResource
 
 
 class Recipes(Resource):
-
+	"""Recipes model
+	"""
     GET_ITEMS_PER_PAGE = 10
 
     @staticmethod
     def parse_get_arguments():
+		"""Written to parse arguments connected with GET request
+		"""
         def cast_bool(x):
+			"""Written to cast argument to bool
+			"""
             if x.lower() == '': return True
             elif x.lower() == 'false': return False
             elif x.lower() == 'true': return True
@@ -32,6 +37,8 @@ class Recipes(Resource):
                 return False
 
         def cast_sort(x):
+			"""Manages sort options for recipes
+			"""
             sortables, x = ['id', 'date_added', 'rate'], x.lower()
             return x if x in sortables else sortables[0]
 
@@ -54,13 +61,19 @@ class Recipes(Resource):
 
     @staticmethod
     def parse_post_arguments():
+		"""Written to parse arguments connected with POST request
+		"""
         def cast_difficulty(val):
+			"""Checks if given rate was 0.5 <= rate <= 5.0, if not returns error
+			"""
             f = float(val)
             if f in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
                 return f
             raise ValueError('can not cast \'{}\' to difficulty'.format(val))
 
         def cast_ingredients(val):
+			"""Casts ingredients of given recipe
+			"""
             res = []
             for ele in val:
                 ingr_id, amount, unit = ele[0], ele[1], ele[2]
@@ -81,9 +94,13 @@ class Recipes(Resource):
         return parser.parse_args()
 
     def options(self):
+		"""Handles options for requests
+		"""
         return None
 
     def get(self):
+		"""Handles GET HTTP request
+		"""
         args = self.parse_get_arguments()
 
         query = Recipe.query
@@ -137,15 +154,16 @@ class Recipes(Resource):
 
 #    @lm.auth_required
     def post(self):
-        """
-        Attempts creation of a new Recipe object in the database. Parameters required by this method are listed
-        in :func:`Recipe.parse_post_arguments`.
+        """Attempts creation of a new Recipe object in the database. Parameters required by this method are listed
+			in :func:`Recipe.parse_post_arguments`.
 
-        This method will return a HTTP201 with a ID of just created recipe. Should any error occur the proper HTTP
-        errors will be throw.
+			This method will return a HTTP201 with a ID of just created recipe. Should any error occur the proper HTTP
+			errors will be throw.
         """
 
         def add_tags(rcp, tags_names):
+			"""Handles tag addition to recipe
+			"""
             tags = []
             for name in tags_names:
                 try:
@@ -161,6 +179,8 @@ class Recipes(Resource):
             rcp.tags = tags
 
         def add_ingredients(rcp, ingrs):
+			"""Handles ingredient addition to recipe
+			"""
             ingredients = []
             for ingr_name, amount, unit_name in ingrs:
                 ingr, unit = Ingredient.query.filter(Ingredient.name == ingr_name).first(),\
@@ -181,12 +201,16 @@ class Recipes(Resource):
             rcp.ingredients = ingredients
 
         def add_photos(rcp, photo_ids):
+			"""Handles photo addition to recipe
+			"""
             for photo in filter(lambda x: x is not None, (Photo.query.get(id) for id in photo_ids)):
                 # photos must not be already attached to any recipe
                 if photo.recipe is not None: return abort(403)
                 rcp.photos.append(photo)
 
         def remove_unused_photos(photo_ids):
+			"""Handles photo removal from recipe
+			"""
             if photo_ids is None: return
             for pid in photo_ids:
                 photo = Photo.query.get(pid)
@@ -223,9 +247,12 @@ class Recipes(Resource):
 
 
 class RecipesWithId(Resource):
-
+	"""Handles Recipe with some given ID actions
+	"""
     @staticmethod
     def get_recipe_by_id(recipe_id):
+		"""Returns recipe with given ID, or 404 error if there was no such recipe
+		"""
         try:
             return Recipe.query.filter(Recipe.id == recipe_id).one()
         except:
@@ -233,12 +260,16 @@ class RecipesWithId(Resource):
 
     @staticmethod
     def update_if_set(recipe, args, field):
+		"""Updates some recipe fields
+		"""
         field_value = getattr(args, field)
         if field_value is not None:
             setattr(recipe, field, field_value)
 
     @staticmethod
     def get_form_parser():
+		"""Fetches arguments from parser
+		"""
         parser = reqparse.RequestParser()
         parser.add_argument('dish_name', type=str, help="dish name")
         parser.add_argument('recipe_text', type=str, help="recipe text")
@@ -251,6 +282,8 @@ class RecipesWithId(Resource):
 
     @staticmethod
     def get_recipe_with_tags(tag_list):
+		"""Returns set of recipes which matches given tags, may return 404 error if there were no found
+		"""
         if len(tag_list) > 0:
             try:
                 return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
@@ -260,14 +293,19 @@ class RecipesWithId(Resource):
             return -1   # Error
 
     def options(self, recipe_id=None):
+		"""Handles options for request
+		"""
         return None
 
     def get(self, recipe_id):
+		"""Handles GET request
+		"""
         return RecipesWithId.get_recipe_by_id(recipe_id).to_json()
 
     @lm.auth_required
     def delete(self, recipe_id):
-
+		"""Handles DELETE request
+		"""
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
 
         try:
@@ -281,7 +319,8 @@ class RecipesWithId(Resource):
 
     @lm.auth_required
     def put(self, recipe_id):
-
+		"""Handles PUT request
+		"""
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
 
         args = RecipesWithId.get_form_parser().parse_args()
