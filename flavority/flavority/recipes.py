@@ -1,28 +1,33 @@
 
 import traceback
+from base64 import b64decode
 from functools import reduce
+from json import loads as json_loads
 from os.path import abspath, join
 
 from flask import request
-from flask.ext.restful import Resource, reqparse
-from flask_restful import abort
+from flask.ext.restful import Resource, reqparse, abort
+from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import lm, app
-from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientAssociation, User
+from .models import Recipe, Tag, tag_assignment, Ingredient, IngredientUnit, IngredientAssociation, Photo, Unit, User
 from .util import Flavority, ViewPager
 from .photos import PhotoResource
 
 
-##Class that handles method for Recipe object
 class Recipes(Resource):
-    ##Variable that represents items shown per page
+    """Recipes model
+    """
     GET_ITEMS_PER_PAGE = 10
 
-    ##Method that handles get request arguments
-    #May return ValueError
     @staticmethod
     def parse_get_arguments():
+        """Written to parse arguments connected with GET request
+        """
         def cast_bool(x):
+            """Written to cast argument to bool
+            """
             if x.lower() == '': return True
             elif x.lower() == 'false': return False
             elif x.lower() == 'true': return True
@@ -32,6 +37,8 @@ class Recipes(Resource):
                 return False
 
         def cast_sort(x):
+            """Manages sort options for recipes
+            """
             sortables, x = ['id', 'date_added', 'rate'], x.lower()
             return x if x in sortables else sortables[0]
 
@@ -52,12 +59,48 @@ class Recipes(Resource):
         parser.add_argument('myrecipes', type=cast_bool, default=False)
         return parser.parse_args()
 
-    ##Method that handles options for request
+    @staticmethod
+    def parse_post_arguments():
+        """Written to parse arguments connected with POST request
+        """
+        def cast_difficulty(val):
+            """Checks if given rate was 0.5 <= rate <= 5.0, if not returns error
+            """
+            f = float(val)
+            if f in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
+                return f
+            raise ValueError('can not cast \'{}\' to difficulty'.format(val))
+
+        def cast_ingredients(val):
+            """Casts ingredients of given recipe
+            """
+            res = []
+            for ele in val:
+                ingr_id, amount, unit = ele[0], ele[1], ele[2]
+                res.append((ingr_id, amount, unit))
+            return res
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('dish_name', type=str, required=True, help="dish name")
+        parser.add_argument('recipe_text', type=str, required=True, help="recipe text")
+        parser.add_argument('preparation_time', type=int, required=True, help="preparation time in minutes")
+        parser.add_argument('portions', type=int, required=True, help="portions info is missing")
+        parser.add_argument('difficulty', type=cast_difficulty, required=True, help='difficulty is missing')
+        parser.add_argument('ingredients', type=cast_ingredients, required=True, help="ingredients are missing")
+        parser.add_argument('tags', type=list, default=[])
+        parser.add_argument('photos', type=list, default=[])
+        parser.add_argument('remove_photos', type=list, default=[])
+
+        return parser.parse_args()
+
     def options(self):
+        """Handles options for requests
+        """
         return None
 
-    ##Method that handles GET request
     def get(self):
+        """Handles GET HTTP request
+        """
         args = self.parse_get_arguments()
 
         query = Recipe.query
@@ -109,80 +152,160 @@ class Recipes(Resource):
             'totalElements': total_elements,
         }
 
-    ##Method that handles POST request
-    @lm.auth_required
+#    @lm.auth_required
     def post(self):
-        args = Recipes.get_form_parser().parse_args()
+        """Attempts creation of a new Recipe object in the database. Parameters required by this method are listed
+            in :func:`Recipe.parse_post_arguments`.
 
-        recipe = Recipe(args.dish_name, None, args.preparation_time, args.recipe_text, args.portions, lm.get_current_user())
-        Recipes.add_tags(recipe, args.tags)
-        Recipes.add_ingredients(recipe, args.ingredients)
+            This method will return a HTTP201 with a ID of just created recipe. Should any error occur the proper HTTP
+            errors will be throw.
+        """
 
-        # TODO: add rest of the arguments
+        def add_tags(rcp, tags_names):
+            """Handles tag addition to recipe
+            """
+            tags = []
+            for name in tags_names:
+                try:
+                    tid = int(name)
+                    tag = Tag.query.get(tid)
+                    if tag is None: raise ValueError()
+                except ValueError:
+                    tag = Tag\
+                        .query\
+                        .filter(func.lower(Tag.name) == name.lower())\
+                        .first()
+                tags.append(tag if tag is not None else Tag(name))
+            rcp.tags = tags
 
-        app.logger.debug(recipe)
+        def add_ingredients(rcp, ingrs):
+            """Handles ingredient addition to recipe
+            """
+            ingredients = []
+            for ingr_name, amount, unit_name in ingrs:
+                ingr, unit = Ingredient.query.filter(Ingredient.name == ingr_name).first(),\
+                             Unit.query.filter(Unit.unit_name == unit_name).first()
+                if ingr is None:
+                    ingr = Ingredient(ingr_name)
+                if unit is None:
+                    unit = Unit(unit_name, None, None)
+                iu = IngredientUnit\
+                    .query\
+                    .filter(IngredientUnit.ingredient_id == ingr.id, IngredientUnit.unit_id == unit.id)\
+                    .first()
+                if iu is None:
+                    iu = IngredientUnit(ingr, unit)
+
+                ia = IngredientAssociation(iu, amount)
+                ingredients.append(ia)
+            rcp.ingredients = ingredients
+
+        def add_photos(rcp, photo_ids):
+            """Handles photo addition to recipe
+            """
+            for photo in filter(lambda x: x is not None, (Photo.query.get(id) for id in photo_ids)):
+                # photos must not be already attached to any recipe
+                if photo.recipe is not None: return abort(403)
+                rcp.photos.append(photo)
+
+        def remove_unused_photos(photo_ids):
+            """Handles photo removal from recipe
+            """
+            if photo_ids is None: return
+            for pid in photo_ids:
+                photo = Photo.query.get(pid)
+                if photo is None: continue
+                if photo.recipe is None or photo.recipe_id is None:
+                    app.db.session.delete()
+
+        args, user = self.parse_post_arguments(), lm.get_current_user()
+        if user is None:
+            user = User.query.first()
+            app.logger.debug('not user detected! for debug purposes using \'{}\''.format(user))
+
+        recipe = Recipe(
+            args.dish_name,
+            args.preparation_time,
+            args.recipe_text,
+            args.portions,
+            args.difficulty,
+            user.id)
+        add_tags(recipe, args.tags)
+        add_ingredients(recipe, args.ingredients)
+        add_photos(recipe, args.photos)
+        remove_unused_photos(args.remove_photos)
+
         try:
             app.db.session.add(recipe)
             app.db.session.commit()
-        except:
-            traceback.print_exc()
+        except SQLAlchemyError as e:
+            app.logger.error(e)
             app.db.session.rollback()
             return Flavority.failure(), 500
 
-        return Flavority.success(), 201
+        return {'id': recipe.id}, 201
 
-    ##Method returns object with arguments taken from parser
+
+class RecipesWithId(Resource):
+    """Handles Recipe with some given ID actions
+    """
+    @staticmethod
+    def get_recipe_by_id(recipe_id):
+        """Returns recipe with given ID, or 404 error if there was no such recipe
+        """
+        try:
+            return Recipe.query.filter(Recipe.id == recipe_id).one()
+        except:
+            abort(404, message="Recipe with id {} doesn't exist".format(recipe_id))
+
+    @staticmethod
+    def update_if_set(recipe, args, field):
+        """Updates some recipe fields
+        """
+        field_value = getattr(args, field)
+        if field_value is not None:
+            setattr(recipe, field, field_value)
+
     @staticmethod
     def get_form_parser():
+        """Fetches arguments from parser
+        """
         parser = reqparse.RequestParser()
-        parser.add_argument('dish_name', type=str, required=True, help="dish name")
-        parser.add_argument('recipe_text', type=str, required=True, help="recipe text")
-        parser.add_argument('preparation_time', type=int, required=True, help="preparation time")
-        parser.add_argument('portions', type=int, required=True, help="portions")
-        parser.add_argument('tags', type=list, required=False, help="tags", action="append")
-        parser.add_argument('ingredients', type=list, required=True, help="ingredients")
+        parser.add_argument('dish_name', type=str, help="dish name")
+        parser.add_argument('recipe_text', type=str, help="recipe text")
+        parser.add_argument('preparation_time', type=int, help="preparation time")
+        parser.add_argument('portions', type=int, help="portions")
+        parser.add_argument('tags', type=int, help="tags", action="append")
+        parser.add_argument('ingredients', type=list, help="ingredients")
 
         return parser
 
-    ##Method handles ingredients addition to recipe
     @staticmethod
-    def add_ingredients(recipe, ingredients):
-        if ingredients is not None:
-            ingredient_id_to_amount = {association["ingr_id"]: association["amount"] for association in ingredients}
-            available_ingredients = Ingredient\
-                .query\
-                .filter(Ingredient.id.in_(','.join([str(assoc["ingr_id"]) for assoc in ingredients])))\
-                .all()
+    def get_recipe_with_tags(tag_list):
+        """Returns set of recipes which matches given tags, may return 404 error if there were no found
+        """
+        if len(tag_list) > 0:
+            try:
+                return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
+            except:
+                abort(404, message="No recipes with given tags!")
+        else:
+            return -1   # Error
 
-            if len(ingredient_id_to_amount) != len(available_ingredients):
-                abort(500, message="Not all ingredients are present in the database")
+    def options(self, recipe_id=None):
+        """Handles options for request
+        """
+        return None
 
-            recipe.ingredients = []
-
-            for ingr in available_ingredients:
-                assoc = IngredientAssociation()
-                assoc.ingredient = ingr
-                assoc.amount = ingredient_id_to_amount[ingr.id]
-                recipe.ingredients.append(assoc)
-
-    ##Method handles tags addition to recipe
-    @staticmethod
-    def add_tags(recipe, tags):
-        if tags is not None:
-            recipe.tags = Tag.query.filter(Tag.id.in_(','.join([str(i) for i in tags]))).all()
-
-
-##Class contains methods for Recipe with some given ID
-class RecipesWithId(Resource):
-
-    ##Method handles GET request
     def get(self, recipe_id):
+        """Handles GET request
+        """
         return RecipesWithId.get_recipe_by_id(recipe_id).to_json()
 
-    ##Methods allow to delete recipe from database, handles DELETE request
     @lm.auth_required
     def delete(self, recipe_id):
-
+        """Handles DELETE request
+        """
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
 
         try:
@@ -194,10 +317,10 @@ class RecipesWithId(Resource):
 
         return Flavority.success()
 
-    ##Method handles PUT request
     @lm.auth_required
     def put(self, recipe_id):
-
+        """Handles PUT request
+        """
         recipe = RecipesWithId.get_recipe_by_id(recipe_id)
 
         args = RecipesWithId.get_form_parser().parse_args()
@@ -220,59 +343,5 @@ class RecipesWithId(Resource):
 
         return Flavority.success()
 
-    ##Method handles options for requests
-    def options(self, recipe_id=None):
-        return None
 
-    ##Method should return one recipe with given id
-    #May return 404 error if there is no recipe with given ID.
-    @staticmethod
-    def get_recipe_by_id(recipe_id):
-        try:
-            return Recipe.query.filter(Recipe.id == recipe_id).one()
-        except:
-            abort(404, message="Recipe with id {} doesn't exist".format(recipe_id))
-
-    ##Method sets given argument to recipe's field
-    @staticmethod
-    def update_if_set(recipe, args, field):
-        field_value = getattr(args, field)
-        if field_value is not None:
-            setattr(recipe, field, field_value)
-
-    ##Method handles getting values from parser
-    @staticmethod
-    def get_form_parser():
-        parser = reqparse.RequestParser()
-        parser.add_argument('dish_name', type=str, help="dish name")
-        parser.add_argument('recipe_text', type=str, help="recipe text")
-        parser.add_argument('preparation_time', type=int, help="preparation time")
-        parser.add_argument('portions', type=int, help="portions")
-        parser.add_argument('tags', type=int, help="tags", action="append")
-        parser.add_argument('ingredients', type=list, help="ingredients")
-
-        return parser
-
-    ##Method should return a set of recipes with given list of tags
-    #May return 404 if it doesn't find anything
-    @staticmethod
-    def get_recipe_with_tags(tag_list):
-        if len(tag_list) > 0:
-            try:
-                return Recipe.query.join(tag_assignment).filter(tag_assignment.tag.in_(tag_list)).all()
-            except:
-                abort(404, message="No recipes with given tags!")
-        else:
-            return -1       #Error!
-
-
-    # @staticmethod
-    # def get_recipe_with_ingredients(ingredient_list):
-    #     if len(ingredient_list) > 0:
-    #         try:
-    #             return Recipe.query.join(ingredient_assignment).filter(ingredient_assignment.ingr.in_(ingredient_list)).all()
-    #         except:
-    #             abort(404, message="No recipes with given ingredients!")
-    #     else:
-    #         return -1       #ERROR!!
-    
+__all__ = ['Recipes', 'RecipesWithId']

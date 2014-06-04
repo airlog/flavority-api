@@ -1,4 +1,5 @@
 
+from datetime import datetime
 from flask import abort
 from flask.ext.restful import Resource, reqparse
 from sqlalchemy.exc import SQLAlchemyError
@@ -7,22 +8,23 @@ from flavority import app, lm
 from .models import User
 
 
-##Class handles user sign up.
 class Signup(Resource):
-
-    ##Method handles getting values from parser
+    """User sign up model
+    """
     @staticmethod
     def get_form_parser():
+        """Fetches arguments from parser
+        """
         parser = reqparse.RequestParser()
         parser.add_argument('email', type=str, required=True, help="username")
         parser.add_argument('password', type=str, required=True, help="password")
 
         return parser            
 
-    ##Method should return user with given email and password
-    #May return KeyError if there is no user with given values.
     @staticmethod
     def get_user(email, password):
+        """Returns user from database, error if there was no such user
+        """
         user = User.query.filter(User.email == email).first()
         if user is not None:
             raise KeyError()
@@ -32,12 +34,14 @@ class Signup(Resource):
     ###
     ### RESTful
     ###
-    ##Method handles options for requests
     def options(self):
+        """Handles options for requests
+        """
         return None
 
-    ##Method handles POST request
     def post(self):
+        """Handles POST requests
+        """
         args = Signup.get_form_parser().parse_args()        
         try:
             user = self.get_user(args.email, args.password)
@@ -56,12 +60,13 @@ class Signup(Resource):
         }, 204
 
 
-##Class handles user sign in
 class Signin(Resource):
-
-    ##Method handles getting values from parser
+    """User sign in model
+    """
     @staticmethod
     def get_form_parser():
+        """Fetches arguments from parser
+        """
         parser = reqparse.RequestParser()
         parser.add_argument('email', type=str, required=True, help="username")
         parser.add_argument('password', type=str, required=True, help="password")
@@ -71,17 +76,25 @@ class Signin(Resource):
     ###
     ### RESTful
     ###
-    ##Method handles options for requests
     def options(self):
+        """Handles options for requests
+        """
         return {}, 200
-
-    ##Method handles POST request
+    
     def post(self):
+        """Handles POST request
+        """
         args = Signin.get_form_parser().parse_args()        
         user = lm.login_user(args["email"], args["password"])
         if user is None:
             abort(403) # invalid username or password
-
+            
+        try:
+            user.last_seen_date = datetime.now()
+            app.db.session.commit()
+        except SQLAlchemyError:
+            app.db.session.rollback()
+                                   
         return {
             "result": "success",
             "token": lm.generate_token(user).decode(),

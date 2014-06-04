@@ -7,15 +7,18 @@ from .models import Tag, tag_assignment
 from .util import ViewPager
 
 
-##Class handles Tag's operations
 class TagsResource(Resource):
-    ##Class handles Tag's operations
+    """Tag model class
+    """
     GET_ITEMS_PER_PAGE = 30
 
-    ##Method gets arguments from parser
     @staticmethod
     def parse_get_arguments():
+        """It's task is to parse arguments for GET request
+        """
         def cast_natural(x):
+            """Should parse given argument to INT number
+            """
             try: i = int(x)
             except ValueError: return 1
             return i if i >= 1 else 1
@@ -25,14 +28,13 @@ class TagsResource(Resource):
         parser.add_argument('limit', type=cast_natural, default=TagsResource.GET_ITEMS_PER_PAGE)
         return parser.parse_args()
 
-    ##Method handles options for requests
     def options(self):
+        """Handles options for requests
+        """
         return None
 
-    ##Method returns a list of TAGS_LIMIT most used tags.
     def get(self):
-        """
-        Returns a list of TAGS_LIMIT most used tags in the following convention:
+        """Returns a list of TAGS_LIMIT most used tags in the following convention:
             ...
             [
                 {

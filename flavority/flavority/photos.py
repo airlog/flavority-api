@@ -12,20 +12,24 @@ from . import app
 from .models import Photo, Recipe
 
 
-##Class handles photo request.
 class PhotoResource(Resource):
+
+    """This class handles request for images.
+    """
 
     KEY_FULL_SIZE = 'full-size'
     KEY_MINI_SIZE = 'mini-size'
 
-    ##Converts image to other format
     @staticmethod
     def convert_image(image, format=Photo.FORMAT):
+        """Converts images
+        """
         return image.convert(format)
 
-    ##Encodes image
     @staticmethod
     def encode_image(image_binary, mini_size=(300, 300)):
+        """Encodes images
+        """
         assert isinstance(image_binary, bytes)
 
         with Image(blob=image_binary) as image:
@@ -40,9 +44,10 @@ class PhotoResource(Resource):
             PhotoResource.KEY_MINI_SIZE: mini,
         }
 
-    ##Method implemented to parse get request arguments
     @staticmethod
     def parse_get_arguments():
+        """Written to parse arguments connected with GET request
+        """
         def cast_mini(x):
             if x.lower() == '': return True
             elif x.lower() == 'false': return False
@@ -56,22 +61,25 @@ class PhotoResource(Resource):
         parser.add_argument('mini', type=cast_mini)
         return parser.parse_args()
 
-    ##Method implemented to parse post request arguments
     @staticmethod
     def parse_post_arguments():
+        """Written to parse arguments connected with POST request
+        """
         parser = reqparse.RequestParser()
         parser.add_argument('file', required=True, location='files')
-        parser.add_argument('recipe_id', required=True, type=int)
+        parser.add_argument('recipe_id', type=int)
         return parser.parse_args()
 
-    ##Handles options for request
     def options(self, photo_id=None):
         return None
 
-    ##Returns a Base64 encoded JPEG image with supplied id from database.
-    #If such an row doesn't exists or supplied id is `None` than HTTP404 will be returned.
-    #If request has a `mini` GET parameter then it will return image's miniature.
     def get(self, photo_id=None):
+        """Returns a Base64 encoded JPEG image with supplied id from database.
+            If such an row doesn't exists or supplied id is `None` than HTTP404 will be
+            returned.
+            If request has a `mini` GET parameter then it will return image's miniature.
+        """
+
         if photo_id is None:
             return abort(404)
 
@@ -87,15 +95,18 @@ class PhotoResource(Resource):
 
         return send_file(file, mimetype='image/jpeg')
 
-    ##Inserts new image to the database.
-    #This method expects two additional arguments:
-    #+ `file` - an image file transmitted with a request
-    #+ `recipe_id` - id of a recipe which owns the image
-    #Method returns a dictionary with a id of just created row.
-    #This method can be used only when no `photo_id` is specified. In other case
-    #HTTP405 is returned. It may also return HTTP500 when adding to the database
-    #fails.
     def post(self, photo_id=None):
+        """ Inserts new image to the database.
+                This method expects two additional arguments:
+                + `file` - an image file transmitted with a request
+                + `recipe_id` - id of a recipe which owns the image
+                Method returns a dictionary with a id of just created row.
+
+                This method can be used only when no `photo_id` is specified. In other case
+                HTTP405 is returned. It may also return HTTP500 when adding to the database
+                fails.
+        """
+
         if photo_id is not None:
             return abort(405)
 
@@ -106,10 +117,12 @@ class PhotoResource(Resource):
         photo = Photo()
         photo.full_data = b64encode(files[self.KEY_FULL_SIZE])
         photo.mini_data = b64encode(files[self.KEY_MINI_SIZE])
-        photo.recipe = Recipe.query.get(args['recipe_id'])
-        app.db.session.add(photo)
+
+        if args.recipe_id is not None:
+            photo.recipe = Recipe.query.get(args['recipe_id'])
 
         try:
+            app.db.session.add(photo)
             app.db.session.commit()
         except SQLAlchemyError as e:
             app.logger.error(e)
