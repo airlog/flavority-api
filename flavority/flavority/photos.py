@@ -60,7 +60,7 @@ class PhotoResource(Resource):
     def parse_post_arguments():
         parser = reqparse.RequestParser()
         parser.add_argument('file', required=True, location='files')
-        parser.add_argument('recipe_id', required=True, type=int)
+        parser.add_argument('recipe_id', type=int)
         return parser.parse_args()
 
     def options(self, photo_id=None):
@@ -115,10 +115,12 @@ class PhotoResource(Resource):
         photo = Photo()
         photo.full_data = b64encode(files[self.KEY_FULL_SIZE])
         photo.mini_data = b64encode(files[self.KEY_MINI_SIZE])
-        photo.recipe = Recipe.query.get(args['recipe_id'])
-        app.db.session.add(photo)
+
+        if args.recipe_id is not None:
+            photo.recipe = Recipe.query.get(args['recipe_id'])
 
         try:
+            app.db.session.add(photo)
             app.db.session.commit()
         except SQLAlchemyError as e:
             app.logger.error(e)
