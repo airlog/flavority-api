@@ -1,4 +1,5 @@
 
+from datetime import datetime
 from flask import abort
 from flask.ext.restful import Resource, reqparse
 from sqlalchemy.exc import SQLAlchemyError
@@ -71,7 +72,13 @@ class Signin(Resource):
         user = lm.login_user(args["email"], args["password"])
         if user is None:
             abort(403) # invalid username or password
-
+            
+        try:
+            user.last_seen_date = datetime.now()
+            app.db.session.commit()
+        except SQLAlchemyError:
+            app.db.session.rollback()
+                                   
         return {
             "result": "success",
             "token": lm.generate_token(user).decode(),
