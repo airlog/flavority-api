@@ -67,6 +67,24 @@ class Comments(Resource):
         except:
             abort(404, message="Comment with id: {} does not exist!".format(comment_id))
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+    #Method to add new comment
+    @lm.auth_required
+    def post(self):
+        args = Comments.get_form_parser().parse_args()
+        
+        comment = Comment(args.text, args.taste, args.difficulty, args.author_id, args.recipe_id)
+            #Ew. tutaj można tworzyć strukturę Rate, aby nie tworzyć do tego js-ów w backbonie
+        try:
+            app.db.session.add(comment)
+            app.db.session.commit()
+        except SQLAlchemyError:
+            app.db.session.rollback()
+            return Flavority.failure(), 500
+        return Flavority.success(), 201
+=======
+=======
     # get all comments about user's recipes
     @staticmethod
     def get_user_recipes_comments(user):
@@ -76,6 +94,7 @@ class Comments(Resource):
             app.logger.error(e)
             abort(404, message="Author with id: {} has no comments!".format(user.id))
 
+>>>>>>> dcb633108828b1554a956b690ea7018d356c90b3
     @staticmethod
     def parse_post_arguments():
         def mark(x):
@@ -97,6 +116,7 @@ class Comments(Resource):
 
     def options(self):
         return None
+>>>>>>> master1
 
     #Method handles comment deletion
     @lm.auth_required
