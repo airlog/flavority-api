@@ -439,3 +439,7 @@ class Photo(db.Model):
     def supported_formats():
         return Photo.FORMAT_ENUM
 
+    def is_attached(self):
+        return self.recipe_id is not None or self.avatar_user_id is not None
+
+

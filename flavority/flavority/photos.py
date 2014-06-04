@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from wand.image import Image
 
 from . import app
-from .models import Photo, Recipe
+from .models import Photo, Recipe, User
 
 
 class PhotoResource(Resource):
@@ -61,6 +61,7 @@ class PhotoResource(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('file', required=True, location='files')
         parser.add_argument('recipe_id', type=int)
+        parser.add_argument('user_id', type=int)
         return parser.parse_args()
 
     def options(self, photo_id=None):
@@ -97,7 +98,9 @@ class PhotoResource(Resource):
 
         This method expects two additional arguments:
         + `file` - an image file transmitted with a request
+        and one of the following
         + `recipe_id` - id of a recipe which owns the image
+        + `user_id` - id of a user to whom this image should be attached as an avatar
         Method returns a dictionary with a id of just created row.
 
         This method can be used only when no `photo_id` is specified. In other case
@@ -118,6 +121,8 @@ class PhotoResource(Resource):
 
         if args.recipe_id is not None:
             photo.recipe = Recipe.query.get(args['recipe_id'])
+        if args.user_id is not None:
+            photo.avatar_user = User.query.get(args['user_id'])
 
         try:
             app.db.session.add(photo)
