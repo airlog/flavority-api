@@ -7,8 +7,10 @@ from flavority import app, lm
 from .models import User
 
 
+##Class handles user sign up.
 class Signup(Resource):
-    
+
+    ##Method handles getting values from parser
     @staticmethod
     def get_form_parser():
         parser = reqparse.RequestParser()
@@ -17,6 +19,8 @@ class Signup(Resource):
 
         return parser            
 
+    ##Method should return user with given email and password
+    #May return KeyError if there is no user with given values.
     @staticmethod
     def get_user(email, password):
         user = User.query.filter(User.email == email).first()
@@ -28,9 +32,11 @@ class Signup(Resource):
     ###
     ### RESTful
     ###
+    ##Method handles options for requests
     def options(self):
         return None
 
+    ##Method handles POST request
     def post(self):
         args = Signup.get_form_parser().parse_args()        
         try:
@@ -50,8 +56,10 @@ class Signup(Resource):
         }, 204
 
 
+##Class handles user sign in
 class Signin(Resource):
-        
+
+    ##Method handles getting values from parser
     @staticmethod
     def get_form_parser():
         parser = reqparse.RequestParser()
@@ -63,9 +71,11 @@ class Signin(Resource):
     ###
     ### RESTful
     ###
+    ##Method handles options for requests
     def options(self):
         return {}, 200
-    
+
+    ##Method handles POST request
     def post(self):
         args = Signin.get_form_parser().parse_args()        
         user = lm.login_user(args["email"], args["password"])
