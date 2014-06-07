@@ -169,5 +169,24 @@ class PhotoResource(Resource):
             'id': photo.id
         }
 
+    @lm.auth_required
+    def delete(self, photo_id=None):
+        if photo_id is None: return abort(405)
+
+        photo, user = Photo.query.get(photo_id), lm.get_current_user()
+        if photo is None: return abort(404)
+
+        if photo.avatar_user_id != user.id: return abort(403)
+
+        try:
+            app.db.session.delete(photo)
+            app.db.session.commit()
+        except SQLAlchemyError as e:
+            app.logger.error(e)
+            app.db.session.rollback()
+            return abort(500)
+
+        return None, 204
+
 
 __all__ = ['PhotoResource']
