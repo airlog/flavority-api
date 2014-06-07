@@ -87,7 +87,6 @@ class PhotoResource(Resource):
             return abort(404)
 
         args = self.parse_get_arguments()
-        app.logger.info(args)
         image = Photo.query.get(photo_id)
         if image is None:
             return abort(404)
@@ -145,6 +144,12 @@ class PhotoResource(Resource):
 
     @lm.auth_required
     def put(self, photo_id=None):
+        """
+        This method updates only avatar images (changes image data).
+
+        :param photo_id: id of a photo to update
+        """
+        
         if photo_id is None: return abort(405)
 
         args, user = self.parse_put_arguments(), lm.get_current_user()
@@ -171,6 +176,12 @@ class PhotoResource(Resource):
 
     @lm.auth_required
     def delete(self, photo_id=None):
+        """
+        This method deletes only avatar images.
+
+        :param photo_id: id of a photo to delete
+        """
+
         if photo_id is None: return abort(405)
 
         photo, user = Photo.query.get(photo_id), lm.get_current_user()
