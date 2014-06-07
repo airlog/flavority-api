@@ -135,7 +135,7 @@ class Recipes(Resource):
             'totalElements': total_elements,
         }
 
-#    @lm.auth_required
+    @lm.auth_required
     def post(self):
         """
         Attempts creation of a new Recipe object in the database. Parameters required by this method are listed
@@ -195,9 +195,6 @@ class Recipes(Resource):
                     app.db.session.delete()
 
         args, user = self.parse_post_arguments(), lm.get_current_user()
-        if user is None:
-            user = User.query.first()
-            app.logger.debug('not user detected! for debug purposes using \'{}\''.format(user))
 
         recipe = Recipe(
             args.dish_name,
@@ -267,10 +264,14 @@ class RecipesWithId(Resource):
 
     @lm.auth_required
     def delete(self, recipe_id):
-
-        recipe = RecipesWithId.get_recipe_by_id(recipe_id)
-
+        user = lm.get_current_user()
+        recipe = user.recipes.filter(Recipe.id == recipe_id).first()
         try:
+            tags_to_remove = filter(lambda tag: tag.recipes.count() == 1, recipe.tags)
+            for tag in tags_to_remove:
+                app.db.session.delete(tag)
+            for photo in recipe.photos:
+                app.db.session.delete(photo)                        
             app.db.session.delete(recipe)
             app.db.session.commit()
         except:

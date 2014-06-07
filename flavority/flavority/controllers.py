@@ -29,4 +29,7 @@ def crossorigin(response):
         'X-Flavority-Token',
         'Content-Type',
     ])
+    response.headers['Access-Control-Allow-Methods'] = ','.join([
+        'GET', 'POST', 'OPTIONS', 'HEAD', 'DELETE', 'PUT',
+    ])
     return response
