@@ -8,7 +8,7 @@ from flask.ext.restful import Resource, reqparse
 from sqlalchemy.exc import SQLAlchemyError
 from wand.image import Image
 
-from . import app
+from . import app, lm
 from .models import Photo, Recipe, User
 
 
@@ -64,6 +64,12 @@ class PhotoResource(Resource):
         parser.add_argument('user_id', type=int)
         return parser.parse_args()
 
+    @staticmethod
+    def parse_put_arguments():
+        parser = reqparse.RequestParser()
+        parser.add_argument('file', required=True, location='files')
+        return parser.parse_args()
+
     def options(self, photo_id=None):
         return None
 
@@ -81,7 +87,6 @@ class PhotoResource(Resource):
             return abort(404)
 
         args = self.parse_get_arguments()
-        app.logger.info(args)
         image = Photo.query.get(photo_id)
         if image is None:
             return abort(404)
@@ -92,6 +97,7 @@ class PhotoResource(Resource):
 
         return send_file(file, mimetype='image/jpeg')
 
+    @lm.auth_required
     def post(self, photo_id=None):
         """
         Inserts new image to the database.
@@ -111,7 +117,7 @@ class PhotoResource(Resource):
         if photo_id is not None:
             return abort(405)
 
-        args = self.parse_post_arguments()
+        args, user = self.parse_post_arguments(), lm.get_current_user()
         file_bytes = args['file'].read()
         files = PhotoResource.encode_image(file_bytes)
 
@@ -135,6 +141,63 @@ class PhotoResource(Resource):
         return {
             'id': photo.id
         }
+
+    @lm.auth_required
+    def put(self, photo_id=None):
+        """
+        This method updates only avatar images (changes image data).
+
+        :param photo_id: id of a photo to update
+        """
+        
+        if photo_id is None: return abort(405)
+
+        args, user = self.parse_put_arguments(), lm.get_current_user()
+        file_bytes = args.file.read()
+        files = PhotoResource.encode_image(file_bytes)
+
+        photo = Photo.query.get(photo_id)
+        if photo is None: return abort(404)
+        if photo.avatar_user is not None and photo.avatar_user != user: return abort(403)
+
+        photo.full_data = b64encode(files[self.KEY_FULL_SIZE])
+        photo.mini_data = b64encode(files[self.KEY_MINI_SIZE])
+
+        try:
+            app.db.session.commit()
+        except SQLAlchemyError as e:
+            app.logger.error(e)
+            app.db.session.rollback()
+            return abort(500)
+
+        return {
+            'id': photo.id
+        }
+
+    @lm.auth_required
+    def delete(self, photo_id=None):
+        """
+        This method deletes only avatar images.
+
+        :param photo_id: id of a photo to delete
+        """
+
+        if photo_id is None: return abort(405)
+
+        photo, user = Photo.query.get(photo_id), lm.get_current_user()
+        if photo is None: return abort(404)
+
+        if photo.avatar_user_id != user.id: return abort(403)
+
+        try:
+            app.db.session.delete(photo)
+            app.db.session.commit()
+        except SQLAlchemyError as e:
+            app.logger.error(e)
+            app.db.session.rollback()
+            return abort(500)
+
+        return None, 204
 
 
 __all__ = ['PhotoResource']
