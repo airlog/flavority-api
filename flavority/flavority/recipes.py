@@ -260,7 +260,20 @@ class RecipesWithId(Resource):
         return None
 
     def get(self, recipe_id):
-        return RecipesWithId.get_recipe_by_id(recipe_id).to_json()
+        my_recipe = False
+        favorite = False
+        recipe = RecipesWithId.get_recipe_by_id(recipe_id)
+        user = lm.get_current_user()
+        if user is not None:
+            if recipe.author_id == user.id:
+                my_recipe = True
+            if recipe in user.favourites:
+                favorite = True
+        return {
+            'recipe': recipe.to_json(),
+            'favorite': favorite,
+            'my_recipe': my_recipe, 
+        }
 
     @lm.auth_required
     def delete(self, recipe_id):
