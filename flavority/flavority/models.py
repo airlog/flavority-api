@@ -24,7 +24,7 @@ class IngredientAssociation(db.Model):
     ingredient_unit_id = db.Column(db.Integer, db.ForeignKey('IngredientUnit.id'))
     amount = db.Column(db.Integer)
 
-    ingredient_unit = db.relationship('IngredientUnit')
+    ingredient_unit = db.relationship('IngredientUnit', backref=db.backref('ingredient_asso', lazy='dynamic'))
 
     def __init__(self, ingredient_unit, amount):
         self.ingredient_unit = ingredient_unit
@@ -39,7 +39,7 @@ class IngredientUnit(db.Model):
     unit_id = db.Column(db.Integer, db.ForeignKey('Unit.id'))
     ingredient_id = db.Column(db.Integer, db.ForeignKey('Ingredient.id'))
 
-    ingredient = db.relationship('Ingredient')
+    ingredient = db.relationship('Ingredient', backref=db.backref('ingredient_unit', lazy='dynamic'))
     unit = db.relationship('Unit')
 
     def __init__(self, ingredient, unit):

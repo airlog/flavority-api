@@ -306,27 +306,66 @@ class RecipesWithId(Resource):
         return Flavority.success()
 
 
-def RecipesAdvancedSearch(Resource)
-
-    def get(self):
-        args = Recipes.parse_get_arguments()
+class RecipesAdvancedSearch(Resource):
+    
+    @staticmethod
+    def parse_get_arguments():
+        def cast_bool(x):
+            if x.lower() == '': return True
+            elif x.lower() == 'false': return False
+            elif x.lower() == 'true': return True
+            try:
+                return bool(x)
+            except ValueError:
+                return False
         
-        query = Recipe.query    # czy to naprawdę tutaj potrzebne?
+        def cast_sort(x):
+            sortables, x = ['id', 'date_added', 'rate'], x.lower()
+            return x if x in sortables else sortables[0]
+        
+        def cast_natural(x):
+            try: i = int(x)
+            except ValueError: return 1
+            return i if i >= 1 else 1
+        
+        parser = reqparse.RequestParser()
+        parser.add_argument('short', type=cast_bool)
+        parser.add_argument('sort_by', type=cast_sort, default='id')
+        parser.add_argument('page', type=cast_natural, default=1)
+        parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
+        parser.add_argument('query', type=str, required=True)
+        return parser.parse_args()
+    
+    def options(self):
+        pass
+    
+    def get(self):
+        args = self.parse_get_arguments()
+        
         tempq = None
-        best = None             # słownik najlepiej dopasowanych przepisów
+        best = None
+        ilist = None
         
         # find all recipes containing at least one demanded ingredient, count all repeats and filter best fitted
         if args['query'] is not None:
+            ilist = b64decode(args['query']).decode().lower()
             query = map(
-                lambda ingr: ingr.recipes,
-                filter(lambda x: x is not None, [Ingredient.query.get(i) for i in args['query']]))
-            tempq = reduce(lambda q1, q2: q1.union(q2), query)
-            best = {i : 0 for i in tempq}
-
-            for i in query:
-                map(lambda rec: best[rec] += 1, i)
-    
-            query = filter(lambda rec: best[rec] >= max(best.values())-1, tempq)
+                lambda ingr: ingr.ingredient_unit.ingredient_asso.recipe_id,
+                filter(lambda x: x is not None, Ingredient.query.filter(Ingredient.name.like('%{}%'.format(ilist)))))
+                        #Problem might appear when typed sth like 'cheese' and we have many cheese types under names 'parmesian cheese', etc.
+                        #I assumed that then we return all ingredients containing 'cheese'
+            app.logger.debug(query) #query jest jakimś tam obiektem, ale list(query) jest zawsze puste, jeśli coś jest nie tak - to w instr. powyżej, to co poniżej już sprawdzaliśmy, że działa
+            if list(query) != []: # sprawdzenie czy lista przepisów w query nie jest pusta
+                tempq = reduce(lambda q1, q2: q1.union(q2), query)
+                best = {i : 0 for i in tempq}
+                            
+                for i in query:
+                    for j in i:
+                        best[j] += 1
+                            
+                query = filter(lambda rec: best[rec] >= max(best.values())-1, tempq)
+        else:
+            return abort(500)
         
         # select proper sorting key
         query = {
@@ -345,7 +384,7 @@ def RecipesAdvancedSearch(Resource)
         return {
             'recipes': list(map(func, query.all())),
             'totalElements': total_elements,
-        }
+    }
 
 
-__all__ = ['Recipes', 'RecipesWithId']
+__all__ = ['Recipes', 'RecipesWithId', 'RecipesAdvancedSearch']
