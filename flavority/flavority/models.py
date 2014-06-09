@@ -129,7 +129,7 @@ class User(db.Model, UserMixin):
     last_seen_date = db.Column(db.DateTime)
     
 #    token = db.Column(db.String(TOKEN_LENGTH), default=None)
-    favourites = db.relationship('Recipe', secondary=favour_recipes)
+    favourites = db.relationship('Recipe', secondary=favour_recipes, lazy='dynamic')
 
     @staticmethod
     def gen_salt(length = HASH_SIZE):

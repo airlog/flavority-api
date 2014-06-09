@@ -8,6 +8,7 @@ from .ingredients import IngredientsResource
 from .photos import PhotoResource
 from .units import UnitResource
 from .users import UserById
+from .favorite import FavoriteRecipes
 
 
 app.restapi.add_resource(Signup, "/auth/signup")
@@ -28,4 +29,6 @@ app.restapi.add_resource(PhotoResource,
                        '/photos/<int:photo_id>/')
                          
 app.restapi.add_resource(UserById, "/users", "/users/<int:user_id>")
+
+app.restapi.add_resource(FavoriteRecipes, "/favorite/","/favorite/<int:recipe_id>")
 
