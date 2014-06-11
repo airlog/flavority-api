@@ -306,8 +306,10 @@ class Comment(db.Model):
         return '<Commented by: %r,to recipe: %r, with text: %r>' % (self.author_id, self.recipe_id , self.text)
     
     def to_json(self):
+        photo = Photo.query.filter(Photo.avatar_user_id == self.author.id).first();
         extra_content = {}
         extra_content.update({'author_name': self.author.email})                
+        extra_content.update({'author_avatar': photo.id if photo is not None else ""})                
         extra_content.update({'recipe_name': self.recipe.dish_name})                
         return to_json_dict(self, self.__class__, extra_content)
     
