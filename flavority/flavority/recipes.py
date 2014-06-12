@@ -319,4 +319,104 @@ class RecipesWithId(Resource):
         return Flavority.success()
 
 
-__all__ = ['Recipes', 'RecipesWithId']
+class RecipesAdvancedSearch(Resource):
+    
+    @staticmethod
+    def parse_get_arguments():
+        def cast_bool(x):
+            if x.lower() == '': return True
+            elif x.lower() == 'false': return False
+            elif x.lower() == 'true': return True
+            try:
+                return bool(x)
+            except ValueError:
+                return False
+        
+        def cast_sort(x):
+            sortables, x = ['id', 'date_added', 'rate'], x.lower()
+            return x if x in sortables else sortables[0]
+        
+        def cast_natural(x):
+            try: i = int(x)
+            except ValueError: return 1
+            return i if i >= 1 else 1
+        
+        parser = reqparse.RequestParser()
+        parser.add_argument('short', type=cast_bool)
+        parser.add_argument('sort_by', type=cast_sort, default='id')
+        parser.add_argument('page', type=cast_natural, default=1)
+        parser.add_argument('limit', type=cast_natural, default=Recipes.GET_ITEMS_PER_PAGE)
+        parser.add_argument('query', type=str, required=True)
+        return parser.parse_args()
+    
+    def options(self):
+        pass
+    
+    def get(self):
+        args = self.parse_get_arguments()
+        
+        tempq = None
+        best = None
+        ilist = None
+        
+        # find all recipes containing at least one demanded ingredient, count all repeats and filter best fitted
+        if args['query'] is not None:
+            # decode input to list of ingredient names
+            ilist = args['query'].lower()[1:-1]
+            if not ilist:
+                abort(500, message="No products provided to search for!")
+            ilist = list(map(lambda i: i[1:-1], ilist.split(',')))
+            
+            # select all recipes containing at least one ingredient we are intrerested
+            query = []
+            for i in ilist:
+                query = query + Recipe.query.join(Recipe.ingredients).\
+                                    join(IngredientAssociation.ingredient_unit).\
+                                    join(IngredientUnit.ingredient).\
+                                    filter(Ingredient.name.like('%{}%'.format(i))).all()
+            if not query:
+                abort(500, message="Couldn't find any recipes made containing given products!")
+
+            if list(query) != []:
+                # produce list of recipes without duplicates
+                tempq = []
+                for i in query:
+                    if i not in tempq:
+                        tempq.append(i)
+
+                # produce dictionary of ingredients
+                best = {i : 0 for i in tempq}
+                
+                # count validity of recipe - how many demanded ingredients contain
+                for i in query:
+                    best[i] += 1
+
+                # retrieve best matching
+                tempq = list(filter(lambda rec: best[rec] == max(best.values()), tempq))
+                
+                # produce query to be returned
+                query = Recipe.query.filter(Recipe.id.in_(map(lambda r: r.id, tempq)))
+        else:
+            return abort(500)
+        
+        # select proper sorting key
+        query = {
+            'id': lambda x: x,
+            'date_added': lambda x: x.order_by(Recipe.creation_date.desc()),
+            'rate': lambda x: x.order_by(Recipe.taste_comments.desc())
+        }[args['sort_by']](query)
+        total_elements = query.count()
+        query = ViewPager(query, page=args['page'], limit_per_page=args['limit'])
+        
+        # return short or standard form as requested
+        func = lambda x: x.to_json()
+        if args['short']:
+            func = lambda x: x.to_json_short(get_photo=lambda photo: photo.id)
+        
+        return {
+            'recipes': list(map(func, query.all())),
+            'totalElements': total_elements,
+        }
+
+
+__all__ = ['Recipes', 'RecipesWithId', 'RecipesAdvancedSearch']
