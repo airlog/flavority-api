@@ -1,7 +1,6 @@
-import traceback
-
 from flask.ext.restful import Resource, reqparse
 from flask_restful import abort
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import lm, app
 from .models import Recipe, User
@@ -26,6 +25,17 @@ class FavoriteRecipes(Resource):
         parser.add_argument('limit', type=cast_natural, default=FavoriteRecipes.GET_ITEMS_PER_PAGE)
         return parser.parse_args()
 
+    @staticmethod
+    def parse_post_arguments():
+        def cast_natural(x):
+            try: i = int(x)
+            except ValueError: return 1
+            return i if i >= 1 else 1
+            
+        parser = reqparse.RequestParser()
+        parser.add_argument('recipe_id', type=cast_natural, default=0)
+        return parser.parse_args()
+
     def options(self, recipe_id =None):
         return None
 
@@ -44,9 +54,9 @@ class FavoriteRecipes(Resource):
 
     @lm.auth_required
     def post(self, recipe_id = None):
+        args = self.parse_post_arguments()
         user = lm.get_current_user()
-        user = User.query.first()
-        recipe = Recipe.query.get(recipe_id)
+        recipe = Recipe.query.get(args['recipe_id'])
         try:
             if recipe is not None and recipe not in user.favourites:
                 user.favourites.append(recipe)
@@ -59,7 +69,6 @@ class FavoriteRecipes(Resource):
 
     @lm.auth_required
     def delete(self, recipe_id = None):
-        user = User.query.first()
         user = lm.get_current_user()
         recipe = user.favourites.filter(Recipe.id == recipe_id).first()
         try:
