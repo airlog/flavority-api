@@ -25,7 +25,7 @@ app.restapi.add_resource(IngredientsResource, '/ingredients/')
 app.restapi.add_resource(UnitResource, '/units/')
 
 app.restapi.add_resource(PhotoResource,
-                        '/photos/',
+                       '/photos/',
                        '/photos/<int:photo_id>/')
                          
 app.restapi.add_resource(UserById, "/users", "/users/<int:user_id>")

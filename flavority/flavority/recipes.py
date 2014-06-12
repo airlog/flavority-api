@@ -348,22 +348,41 @@ class RecipesAdvancedSearch(Resource):
         
         # find all recipes containing at least one demanded ingredient, count all repeats and filter best fitted
         if args['query'] is not None:
-            ilist = b64decode(args['query']).decode().lower()
-            query = map(
-                lambda ingr: ingr.ingredient_unit.ingredient_asso.recipe_id,
-                filter(lambda x: x is not None, Ingredient.query.filter(Ingredient.name.like('%{}%'.format(ilist)))))
-                        #Problem might appear when typed sth like 'cheese' and we have many cheese types under names 'parmesian cheese', etc.
-                        #I assumed that then we return all ingredients containing 'cheese'
-            app.logger.debug(query) #query jest jakimś tam obiektem, ale list(query) jest zawsze puste, jeśli coś jest nie tak - to w instr. powyżej, to co poniżej już sprawdzaliśmy, że działa
-            if list(query) != []: # sprawdzenie czy lista przepisów w query nie jest pusta
-                tempq = reduce(lambda q1, q2: q1.union(q2), query)
-                best = {i : 0 for i in tempq}
-                            
+            # decode input to list of ingredient names
+            ilist = args['query'].lower()[1:-1]
+            if not ilist:
+                abort(500, message="No products provided to search for!")
+            ilist = list(map(lambda i: i[1:-1], ilist.split(',')))
+            
+            # select all recipes containing at least one ingredient we are intrerested
+            query = []
+            for i in ilist:
+                query = query + Recipe.query.join(Recipe.ingredients).\
+                                    join(IngredientAssociation.ingredient_unit).\
+                                    join(IngredientUnit.ingredient).\
+                                    filter(Ingredient.name.like('%{}%'.format(i))).all()
+            if not query:
+                abort(500, message="Couldn't find any recipes made containing given products!")
+
+            if list(query) != []:
+                # produce list of recipes without duplicates
+                tempq = []
                 for i in query:
-                    for j in i:
-                        best[j] += 1
-                            
-                query = filter(lambda rec: best[rec] >= max(best.values())-1, tempq)
+                    if i not in tempq:
+                        tempq.append(i)
+
+                # produce dictionary of ingredients
+                best = {i : 0 for i in tempq}
+                
+                # count validity of recipe - how many demanded ingredients contain
+                for i in query:
+                    best[i] += 1
+
+                # retrieve best matching
+                tempq = list(filter(lambda rec: best[rec] == max(best.values()), tempq))
+                
+                # produce query to be returned
+                query = Recipe.query.filter(Recipe.id.in_(map(lambda r: r.id, tempq)))
         else:
             return abort(500)
         
@@ -384,7 +403,7 @@ class RecipesAdvancedSearch(Resource):
         return {
             'recipes': list(map(func, query.all())),
             'totalElements': total_elements,
-    }
+        }
 
 
 __all__ = ['Recipes', 'RecipesWithId', 'RecipesAdvancedSearch']
